@@ -36,7 +36,7 @@
 
 ### `memory_bank/implementation_plan.md`
 
-拥有构建 HSO 基础游戏的执行顺序。
+拥有构建 HSO 基础产品的执行顺序。
 
 它回答：
 
@@ -49,7 +49,7 @@
 
 ### `memory_bank/repository_skeleton.md`
 
-拥有基础游戏冻结的第二步仓库骨架与运行时交付边界。
+拥有基础产品冻结的第二步仓库骨架与运行时交付边界。
 
 它回答：
 
@@ -61,18 +61,32 @@
 
 当问题涉及仓库布局、运行时归属、本地与全局存储边界，或第二步交付护栏时，使用此文件。
 
-### `memory_bank/base_game_contract.md`
+### `memory_bank/domain_model.md`
 
-拥有基础游戏冻结的第一步契约。
+拥有基础产品冻结的第三步核心领域模型。
 
 它回答：
 
-1. 基础游戏六步闭环的确切内容。
+1. 基础产品最小需要哪些核心实体。
+2. 每个实体在 v1 中必须具备哪些字段。
+3. 各实体之间如何形成从研究输入到构建预览的闭环关系。
+4. `build_result` 在领域层如何由 `build_job` 与 `build_artifact` 承载。
+5. 素材可见性模型在不新增额外核心对象时如何解释。
+
+当问题涉及实体边界、字段必要性、对象关系，或第 3 步领域模型护栏时，使用此文件。
+
+### `memory_bank/base_game_contract.md`
+
+拥有基础产品冻结的第一步契约。
+
+它回答：
+
+1. 基础产品六步闭环的确切内容。
 2. 核心对象词汇表的含义。
 3. 哪些非目标明确不在 v1 范围内。
 4. 后续步骤必须视为已固定的边界是什么。
 
-当问题涉及 `research card`、`paper_project`、`build_result`、`reference_source` 的确切含义，或第一步基础游戏边界的精确界定时，使用此文件。
+当问题涉及 `research card`、`paper_project`、`build_result`、`reference_source` 的确切含义，或第一步基础产品边界的精确界定时，使用此文件。
 
 本文件应被视为第一步术语与范围护栏的即时权威来源。
 
@@ -88,6 +102,25 @@
 4. 下一个边界或交接点从哪里开始。
 
 当问题涉及项目历史、已完成里程碑，或某个任务是否已被验收时，使用此文件。
+
+## `memory_bank` 文件职责速查
+
+当前 `memory_bank/` 中各文件职责如下：
+
+1. `PRD.md`
+   拥有产品目标、用户、范围、非目标与系统原则。
+2. `tech_stack.md`
+   拥有默认技术方向、主辅语言边界与工程基线假设。
+3. `implementation_plan.md`
+   拥有基础产品实施顺序、步骤拆解与每步验证要求。
+4. `base_game_contract.md`
+   拥有基础产品六步用户闭环、核心对象词汇和第一版非目标。
+5. `repository_skeleton.md`
+   拥有仓库骨架、运行时归属、环境边界、存储边界与质量基础设施。
+6. `domain_model.md`
+   拥有第 3 步核心领域模型，包括最小实体集、必需字段与实体关系。
+7. `progress.md`
+   拥有已完成步骤、交付内容、验收依据与当前边界。
 
 ## 辅助文件
 
@@ -113,4 +146,5 @@
 4. `memory_bank/implementation_plan.md`
 5. `memory_bank/base_game_contract.md`——当第一步术语或范围边界有疑问时
 6. `memory_bank/repository_skeleton.md`——当第二步仓库与运行时边界有疑问时
-7. `memory_bank/progress.md`——了解哪些工作已被验收
+7. `memory_bank/domain_model.md`——当第三步实体、字段或关系边界有疑问时
+8. `memory_bank/progress.md`——了解哪些工作已被验收

@@ -2,14 +2,14 @@
 
 ## 2026-03-28
 
-### 已完成：第 1 步 —— 锁定基础游戏契约
+### 已完成：第 1 步 —— 锁定基础产品契约
 
 `memory_bank/implementation_plan.md` 的第 1 步已完成，并由用户手动验收。
 
 #### 交付内容
 
 1. 新增 `memory_bank/base_game_contract.md`，作为第 1 步契约的唯一权威来源。
-2. 冻结六步基础游戏用户流程：
+2. 冻结六步基础产品用户流程：
    研究输入 -> 研究卡片 -> 论文项目 -> 模板 -> 结构 -> 构建与预览。
 3. 冻结核心对象词汇表，涵盖：
    `research input`（研究输入）、`research card`（研究卡片）、`paper project`（论文项目）、`template`（模板）、`section`（章节）、`asset`（素材）、`build job`（构建任务）、`build result`（构建结果）和 `reference source`（参考来源）。
@@ -20,7 +20,7 @@
 
 第 1 步依据以下检查项通过验收：
 
-1. 六项基础游戏操作可追溯回 `memory_bank/PRD.md`，未引入隐性第七项操作。
+1. 六项基础产品操作可追溯回 `memory_bank/PRD.md`，未引入隐性第七项操作。
 2. `memory_bank/base_game_contract.md` 对 `research card` 与 `paper project` 的区别描述足够清晰，其他开发者可据此做出一致解释。
 3. 非目标与 `memory_bank/PRD.md` 第 8 节保持对齐。
 4. `tasks/todo.md` 一致反映第 1 步工作、审查摘要及等待测试状态。
@@ -63,3 +63,33 @@
 #### 当前边界
 
 项目在第 3 步之前有意暂停。下一步实现工作应从 `memory_bank/implementation_plan.md` 的第 3 步任务（领域模型）开始，而非依赖已冻结的第 2 步边界之外的未文档化假设。
+
+---
+
+### 已完成：第 3 步 —— 核心领域建模
+
+`memory_bank/implementation_plan.md` 的第 3 步已完成并通过验证。
+
+#### 交付内容
+
+1. 新增 `memory_bank/domain_model.md`，作为第 3 步契约的唯一权威来源。
+2. 冻结基础产品的九个最小核心实体：`research_card`、`paper_project`、`paper_section`、`template`、`asset`、`reference_source`、`build_job`、`build_artifact` 和 `error_event`。
+3. 为每个实体冻结 v1 必需字段，只保留能直接支撑基础产品闭环的标识符、状态字段、时间戳、版本字段和最小元数据。
+4. 冻结核心实体关系，覆盖研究卡片到论文项目、论文项目到模板、章节、素材、参考来源、构建任务，以及构建任务到构建产物的关系。
+5. 明确 Step 1 中用户可感知的 `build_result` 在 Step 3 中由 `build_job + build_artifact` 共同承载，避免术语漂移。
+6. 在不额外引入新的核心领域对象前提下，解释素材可见性模型 `project_only / selected_projects / all_projects` 与项目关系。
+7. 更新 `tasks/todo.md`，追踪第 3 步工作、审查摘要及测试后文档收口状态。
+
+#### 验收依据
+
+第 3 步依据以下检查项通过验收：
+
+1. 每个实体都能直接映射到基础产品六步流程中的至少一个用户动作。
+2. 每个冻结字段都能回答“如果没有它，哪一个 v1 功能会坏掉”。
+3. 仅凭 `memory_bank/domain_model.md` 的关系说明，开发者可以从研究输入走通到构建预览，无需发明额外核心对象。
+4. 本轮文档未提前进入 `memory_bank/implementation_plan.md` 第 4 步的页面、路由或状态规划。
+5. `domain_model.md` 与 `base_game_contract.md`、`repository_skeleton.md`、`implementation_plan.md`、`tech_stack.md` 间未发现术语或边界冲突。
+
+#### 当前边界
+
+第 3 步已完成并通过验收。下一步实现工作应从 `memory_bank/implementation_plan.md` 的第 4 步任务（用户界面页面规划）开始，而不是回退修改已冻结的领域模型边界。

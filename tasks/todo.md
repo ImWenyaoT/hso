@@ -73,6 +73,18 @@
 - [x] 等待用户执行 Step 2 测试并确认结果
 - [x] 在用户确认前不进入 Step 3 的领域建模
 
+## Current Task: Step 3 Core Domain Modeling
+
+- [x] 通读 `memory_bank/` 全部文件，并以 `progress.md` 确认前置边界已冻结到 Step 2
+- [x] 提炼 Step 3 所需的最小实体、必要字段与实体关系
+- [x] 新建 `memory_bank/domain_model.md` 作为 Step 3 的单一事实来源，且不提前进入 Step 4 的页面规划
+- [x] 对照 base game 六步流程复核实体集是否足够且无额外对象膨胀
+- [x] 对照字段必要性测试逐项删去无法映射到 v1 功能的字段
+- [x] 对照关系测试复核是否无需发明额外对象即可解释完整流程
+- [ ] 等待用户执行 Step 3 测试并确认结果
+- [ ] 在用户确认前不更新 `memory_bank/progress.md`
+- [ ] 在用户确认前不更新 `memory_bank/architecture.md`
+
 ## Checklist
 
 - [x] 阅读 `idea.md`、`PRD.md`、`CLAUDE.md`、`AGENTS.md`
@@ -120,3 +132,7 @@
 - 已新增 `memory_bank/repository_skeleton.md` 作为 Step 2 的唯一事实来源，单独冻结最小仓库结构、Electron main / renderer / local worker 的运行时归属、环境依赖类别、`.hso` 与 app data 的存储边界、以及 v1 必需的质量基础设施。
 - 已明确 Step 2 只定义边界与职责，不提前写入 Step 3 的实体、字段、关系或数据库 schema，避免任务越界。
 - 已完成 Step 2 验收：对照 Section 7 七条核查项全部通过，跨文档一致性无冲突，`memory_bank/progress.md` 已收口记录。
+- 已新增 `memory_bank/domain_model.md` 作为 Step 3 的唯一事实来源，冻结九个核心实体、每个实体的 v1 必需字段，以及支撑基础产品闭环的实体关系。
+- 已明确 Step 1 用户感知的 `build_result` 在 Step 3 中由 `build_job + build_artifact` 共同承载，避免术语漂移。
+- 已在不新增额外核心领域对象的前提下，解释素材可见性模式 `project_only / selected_projects / all_projects` 与项目关系。
+- 已确认本轮文档未提前进入 Step 4 的页面、路由或状态规划；当前状态停在 Step 3，等待用户测试。
