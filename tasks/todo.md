@@ -81,9 +81,21 @@
 - [x] 对照 base game 六步流程复核实体集是否足够且无额外对象膨胀
 - [x] 对照字段必要性测试逐项删去无法映射到 v1 功能的字段
 - [x] 对照关系测试复核是否无需发明额外对象即可解释完整流程
-- [ ] 等待用户执行 Step 3 测试并确认结果
-- [ ] 在用户确认前不更新 `memory_bank/progress.md`
-- [ ] 在用户确认前不更新 `memory_bank/architecture.md`
+- [x] 等待用户执行 Step 3 测试并确认结果
+- [x] 在用户确认后更新 `memory_bank/progress.md`
+- [x] 在用户确认后更新 `memory_bank/architecture.md`
+
+## Current Task: Step 4 UI Page Planning
+
+- [x] 通读 `memory_bank/` 全部文件，并以 `progress.md` 确认当前边界停在 Step 4
+- [x] 提炼 Step 4 所需的最小页面/区域、单一职责与状态变体
+- [x] 新建 `memory_bank/ui_page_plan.md` 作为 Step 4 的单一事实来源，且不提前进入 Step 5 的研究输入流程细节
+- [x] 对照完整用户旅程复核页面数量是否最小且无额外路由膨胀
+- [x] 对照页面职责测试复核页面是否越权承担编排或领域逻辑
+- [x] 对照状态测试复核空态、加载态、成功态、错误态是否覆盖完整
+- [x] 等待用户执行 Step 4 测试并确认结果
+- [x] 在用户确认后更新 `memory_bank/progress.md`
+- [x] 在用户确认后更新 `memory_bank/architecture.md`
 
 ## Checklist
 
@@ -136,3 +148,7 @@
 - 已明确 Step 1 用户感知的 `build_result` 在 Step 3 中由 `build_job + build_artifact` 共同承载，避免术语漂移。
 - 已在不新增额外核心领域对象的前提下，解释素材可见性模式 `project_only / selected_projects / all_projects` 与项目关系。
 - 已确认本轮文档未提前进入 Step 4 的页面、路由或状态规划；当前状态停在 Step 3，等待用户测试。
+- 已新增 `memory_bank/ui_page_plan.md` 作为 Step 4 的唯一事实来源，将基础产品 UI 收敛为 3 个顶层页面和 4 个项目页内区域，避免提前膨胀为多路由工作台。
+- 已为每个页面与区域写明单一职责和“不应做什么”，将编排、数据库、LaTeX 构建和模板映射规则继续留在应用层或 worker 边界内。
+- 已为输入页、研究卡片页、项目详情页及其四个关键区域补齐空态、加载态、成功态和错误态，确保 Step 4 验收可以逐项检查。
+- 已确认 `ui_page_plan.md` 未提前冻结 Step 5 的输入类型、检索优先级、研究卡片 schema 或项目导入载荷；当前状态停在 Step 4，等待用户测试。
