@@ -1,111 +1,111 @@
-# HSO Base Game Contract
+# HSO 基础游戏契约
 
-## 1. Base Game Brief
+## 1. 基础游戏概述
 
-This document is the single source of truth for Step 1 of the HSO base game contract. It freezes the first-release user loop, the core object vocabulary, and the explicit non-goals for implementation.
+本文档是 HSO 基础游戏契约第一步的唯一权威来源。它锁定了第一版发布的用户操作闭环、核心对象词汇表，以及实现阶段的明确非目标。
 
-The base game contains exactly six user actions, in this order:
+基础游戏包含恰好六个用户操作，顺序如下：
 
-1. **Enter research input**
-   The user starts from a keyword or a supported seed paper reference. The goal is to provide a low-barrier research starting point rather than ask the user to prepare a full paper project first.
+1. **输入研究起点**
+   用户从关键词或支持的种子论文引用开始。目标是提供一个低门槛的研究切入点，而不是要求用户预先准备好完整的论文项目。
 
-2. **Receive a research card**
-   The system retrieves objective paper data and returns a structured research card. This card is a preparation artifact that helps the user understand the starting area and select project-ready material.
+2. **获取研究卡片**
+   系统检索客观的论文数据，并返回一张结构化的 `research_card`。这张卡片是一个准备阶段产物，帮助用户了解起始研究领域，并筛选出适合项目的材料。
 
-3. **Convert to a paper project**
-   After reviewing the research card, the user converts selected structured content into a paper project. This is the moment where the main working object of the product is created.
+3. **转化为论文项目**
+   用户审阅 `research_card` 后，将选定的结构化内容转化为一个 `paper_project`。这是产品主工作对象被创建的时刻。
 
-4. **Choose a template**
-   The user attaches one supported template package to the paper project. Template choice is controlled and limited to the supported catalog frozen in the implementation plan.
+4. **选择模板**
+   用户为 `paper_project` 绑定一个受支持的 `template` 包。模板选择范围受控，仅限于实现计划中锁定的支持目录。
 
-5. **Edit the paper structure**
-   The user works on the normalized paper structure inside the paper project. This includes managing ordered sections and the minimum set of build-relevant materials needed to continue toward a build.
+5. **编辑论文结构**
+   用户在 `paper_project` 内处理规范化的论文结构，包括管理有序的 `section` 列表，以及继续推进构建所需的最小 `asset` 集合。
 
-6. **Build and preview**
-   The system runs the controlled LaTeX build flow and returns a previewable result. The user can inspect the PDF, understand success or failure, and continue iterating inside the desktop app.
+6. **构建与预览**
+   系统运行受控的 LaTeX 构建流程并返回可预览的结果。用户可以查看 PDF、了解成功或失败的情况，并在桌面应用内继续迭代。
 
-The base game does not contain a seventh hidden action. In particular, it does not assume collaboration, arbitrary template engineering, open-ended IDE behavior, or independent research-product workflows outside the paper project loop.
+基础游戏不包含第七个隐藏操作。具体而言，它不预设协作功能、任意模板工程、开放式 IDE 行为，或游离于 `paper_project` 闭环之外的独立研究产品工作流。
 
-## 2. Core Object Vocabulary
+## 2. 核心对象词汇表
 
 ### `research input`
 
-The user-provided starting point for research generation. In v1 this means a keyword, DOI, arXiv ID, paper title, or paper URL, aligned with the implementation plan.
+用户提供的研究生成起点。在 v1 中，这意味着关键词、DOI、arXiv ID、论文标题或论文 URL，与实现计划保持一致。
 
 ### `research card`
 
-A structured, objective, pre-project research artifact created from retrieval plus summarization. It exists to help the user move from a vague topic or seed paper into a usable project starting point.
+一个结构化、客观、项目前置的研究产物，由检索加摘要生成。其存在是为了帮助用户从模糊的主题或种子论文出发，进入一个可用的项目起点。
 
-It is **not** the main working object of HSO. It is upstream material that can feed a paper project, but it does not own template selection, section management, build execution, or preview status.
+它**不是** HSO 的主工作对象。它是上游材料，可以为 `paper_project` 提供输入，但它不拥有模板选择、`section` 管理、构建执行或预览状态。
 
-### `paper project`
+### `paper_project`
 
-The core working object of the base game. A paper project organizes the ongoing materials required to produce a paper in the supported workflow, including template choice, section structure, build-relevant assets, reference sources, and build history.
+基础游戏的核心工作对象。`paper_project` 组织了在支持的工作流中产出一篇论文所需的持续性材料，包括模板选择、`section` 结构、与构建相关的 `asset`、`reference_source` 以及构建历史。
 
-Unlike a research card, a paper project is designed for continuous progression through writing structure, build execution, and preview.
+与 `research_card` 不同，`paper_project` 设计用于持续推进写作结构、构建执行和预览。
 
 ### `template`
 
-A controlled template package from the supported v1 catalog. A template defines rendering and mapping rules for how normalized paper-project content is expressed in a supported publication format.
+来自支持的 v1 目录的受控模板包。`template` 定义了规范化 `paper_project` 内容如何在受支持的发布格式中呈现的渲染和映射规则。
 
 ### `section`
 
-An ordered normalized unit of paper-project structure, such as title, abstract, introduction, method, or conclusion. Sections belong to the paper project model, not to the research card.
+`paper_project` 结构中的一个有序规范化单元，例如标题、摘要、引言、方法或结论。`section` 属于 `paper_project` 模型，而非 `research_card`。
 
 ### `asset`
 
-A build-relevant file attached to a paper project under the controlled v1 asset model. In the first release, assets refer to supported figure/image files used during the paper workflow. A generic asset is not the same as a reference source.
+按受控 v1 资产模型附加到 `paper_project` 的构建相关文件。在第一版中，`asset` 指论文工作流中使用的受支持图片/图像文件。通用 `asset` 与 `reference_source` 不同。
 
-### `build job`
+### `build_job`
 
-One execution record for a LaTeX build triggered from a paper project. A build job binds execution to a specific project revision snapshot and moves through the frozen v1 states: `queued`, `running`, `succeeded`, and `failed`.
+从 `paper_project` 触发的一次 LaTeX 构建执行记录。`build_job` 将执行与特定项目版本快照绑定，并经历以下冻结的 v1 状态：`queued`、`running`、`succeeded`、`failed`。
 
-### `build result`
+### `build_result`
 
-The recorded outcome of one build job. It includes the observable result of that single execution, such as artifact paths, summaries, status, and timestamps. It is **not** the same thing as the paper project itself or the total state of the project.
+一次 `build_job` 的已记录结果。它包含该次执行的可观测结果，例如产物路径、摘要、状态和时间戳。它**不等同于** `paper_project` 本身或项目的完整状态。
 
-### `reference source`
+### `reference_source`
 
-A structured record of an external paper or citation-relevant source associated with the paper project. It is not a generic uploaded file and should not be modeled as a general asset. Source PDFs may assist ingestion, but `reference source` remains the structured citation-side object.
+与 `paper_project` 关联的外部论文或引用相关来源的结构化记录。它不是通用的上传文件，不应被建模为通用 `asset`。来源 PDF 可辅助数据摄取，但 `reference_source` 始终是结构化引用侧对象。
 
-## 3. First-Release Non-Goals
+## 3. 第一版非目标
 
-The following items are explicitly outside the Step 1 base game contract and must not be implied as partially supported in v1:
+以下内容明确不在第一步基础游戏契约范围内，在 v1 中不得暗示存在部分支持：
 
-1. **No collaboration workflow**
-   The first release is a local single-user assistant, not a multi-user collaborative platform.
+1. **不支持协作工作流**
+   第一版是本地单用户助手，不是多用户协作平台。
 
-2. **No arbitrary LaTeX project import**
-   The app does not promise compatibility with arbitrary existing LaTeX repositories or uncontrolled document engineering setups.
+2. **不支持任意 LaTeX 项目导入**
+   应用不承诺兼容任意现有 LaTeX 仓库或不受控的文档工程配置。
 
-3. **No subjective academic judgment**
-   The information retrieval domain provides objective, traceable material. It does not decide whether a topic is valuable or whether a research direction is academically correct.
+3. **不做主观学术判断**
+   信息检索域提供客观、可溯源的材料，不判断某个主题是否有价值，也不判断某个研究方向在学术上是否正确。
 
-4. **No full-featured editor or LaTeX IDE**
-   The product does not attempt to replace Overleaf, TeXstudio, or a free-form editing environment in v1.
+4. **不提供全功能编辑器或 LaTeX IDE**
+   产品在 v1 中不尝试替代 Overleaf、TeXstudio 或自由编辑环境。
 
-5. **No build cancellation**
-   Build cancellation is not part of the frozen first-release build state model.
+5. **不支持构建取消**
+   构建取消不在冻结的第一版构建状态模型中。
 
-6. **No custom user template upload**
-   Users cannot upload arbitrary template packages and expect them to work in the first release.
+6. **不支持用户自定义模板上传**
+   用户不能在第一版中上传任意模板包并期望其正常工作。
 
-7. **No app-store-grade distribution workflow**
-   The first release targets local use and small-scale internal testing, not a fully hardened public app-store distribution standard.
+7. **不提供应用商店级别的发布工作流**
+   第一版面向本地使用和小规模内部测试，不面向完整加固的公开应用商店发布标准。
 
-8. **No polishing or rewriting as a primary workflow**
-   Editing assistance (paraphrase, expand, rewrite) may exist as auxiliary capability but is not a first-release core narrative or primary user action.
+8. **不以润色或改写为主要工作流**
+   编辑辅助功能（改写、扩展、润色）可作为辅助能力存在，但不是第一版的核心叙事或主要用户操作。
 
-9. **No standalone information-retrieval product**
-   The research retrieval domain exists to feed paper projects, not to operate as an independent product line separate from the paper project workflow.
+9. **不提供独立的信息检索产品**
+   研究检索域的存在是为了给 `paper_project` 提供输入，而非作为独立于 `paper_project` 工作流之外的独立产品线运营。
 
-These non-goals are frozen guardrails for Step 1. If a future release wants to include one of them, it must be introduced as new scope rather than treated as something silently present in the base game.
+这些非目标是第一步的冻结护栏。如果未来版本希望纳入其中任何一项，必须作为新增范围引入，而不是视为基础游戏中已静默存在的功能。
 
-## 4. Verification Notes
+## 4. 验证说明
 
-Step 1 should be validated against the following checks:
+第一步应针对以下检查项进行验证：
 
-1. The six user actions above must map directly to `memory_bank/PRD.md` with no extra hidden capability added here.
-2. Another developer should be able to explain the difference between `research card` and `paper project` using this document alone, without contradicting the PRD.
-3. The non-goals must stay aligned with section 8 of `memory_bank/PRD.md` and must not imply “soft support” for out-of-scope features.
-4. This document defines Step 1 only. It must not contain Step 2 repository structure, runtime ownership, or storage layout decisions.
+1. 上述六个用户操作必须与 `memory_bank/PRD.md` 直接对应，此处不得添加额外的隐藏能力。
+2. 另一位开发者应能仅凭本文档说清 `research card` 与 `paper_project` 的区别，且不与 PRD 相矛盾。
+3. 非目标必须与 `memory_bank/PRD.md` 第 8 节保持一致，不得暗示对范围外功能的"软支持"。
+4. 本文档仅定义第一步，不得包含第二步的仓库结构、运行时归属或存储布局决策。

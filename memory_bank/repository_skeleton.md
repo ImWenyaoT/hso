@@ -1,200 +1,200 @@
-# HSO Repository Skeleton And Delivery Boundaries
+# HSO 仓库骨架与交付边界
 
-## Purpose
+## 目的
 
-This document is the Step 2 source of truth for the HSO base game.
+本文档是 HSO 基础游戏第 2 步的唯一权威来源。
 
-It freezes:
+冻结内容：
 
-1. The minimum repository structure.
-2. Runtime ownership across Electron main, renderer, and local worker.
-3. The required environment dependency categories.
-4. The boundary between project-local storage and global app-data storage.
-5. The minimum quality infrastructure that must exist from the beginning.
+1. 最小仓库结构。
+2. Electron 主进程、渲染进程和本地 worker 之间的运行时归属。
+3. 必需的环境依赖类别。
+4. 项目本地存储与全局应用数据存储之间的边界。
+5. 从一开始就必须存在的最小质量基础设施。
 
-This document does **not** define the core domain entities, field schema, or entity relationships. Those belong to Step 3.
+本文档**不**定义核心领域实体、字段 schema 或实体关系。这些内容属于第 3 步。
 
-## 1. Minimum Repository Structure
+## 1. 最小仓库结构
 
-The initial repository layout for the base game should be:
+基础游戏的初始仓库布局应为：
 
 1. `src/main/`
-   Owns the Electron main process: app lifecycle, window management, native dialogs, app-data path resolution, IPC registration, controlled process spawning, and desktop-level integrations.
+   归属 Electron 主进程：应用生命周期、窗口管理、原生对话框、应用数据路径解析、IPC 注册、受控进程派生，以及桌面级集成。
 
 2. `src/renderer/`
-   Owns the React renderer UI: user input, view state, screen composition, interaction feedback, and presentation of research cards, paper projects, build status, and preview actions.
+   归属 React 渲染器 UI：用户输入、视图状态、页面组合、交互反馈，以及研究卡片、论文项目、构建状态和预览操作的展示。
 
 3. `src/application/`
-   Owns application-layer orchestration and use-case flows: research-card generation coordination, convert-to-project flow, template selection flow, build triggering, error summarization, and cross-domain coordination.
+   归属应用层编排与用例流程：研究卡片生成协调、转换为项目流程、模板选择流程、构建触发、错误摘要生成，以及跨领域协调。
 
 4. `src/worker/`
-   Owns the isolated local worker runtime for heavy execution tasks, especially the controlled LaTeX build pipeline and related filesystem-safe execution steps.
+   归属用于繁重执行任务的隔离本地 worker 运行时，尤其是受控 LaTeX 构建流水线及相关文件系统安全执行步骤。
 
 5. `src/shared/`
-   Owns runtime-shared contracts: TypeScript schemas, IPC contracts, DTOs, enums, status models, validation helpers, and shared constants needed by more than one runtime boundary.
+   归属运行时共享契约：TypeScript schema、IPC 契约、DTO、枚举、状态模型、校验辅助函数，以及多个运行时边界共同需要的共享常量。
 
 6. `docs/`
-   Owns implementation-facing engineering notes that are not memory-bank source-of-truth documents.
+   归属面向实现的工程笔记，这些笔记不是 memory_bank 的权威来源文档。
 
 7. `tests/`
-   Owns focused automated tests and regression cases for the base game.
+   归属基础游戏的聚焦自动化测试和回归用例。
 
 8. `memory_bank/`
-   Owns product, architecture, planning, scope, and milestone source-of-truth documents.
+   归属产品、架构、规划、范围和里程碑的权威来源文档。
 
 9. `assets/`
-   Owns repository-managed static assets needed by the application itself, such as icons or packaged template fixtures. It does not own user project assets.
+   归属应用本身所需的仓库管理静态资产，如图标或打包的模板 fixture。不归属用户项目资产。
 
-TypeScript is the default implementation language for every runtime-owned codepath in `src/`.
-Python may exist only in auxiliary scripts or analysis tooling outside the main runtime path.
+TypeScript 是 `src/` 下每个运行时拥有代码路径的默认实现语言。
+Python 仅可存在于主运行时路径之外的辅助脚本或分析工具中。
 
-## 2. Runtime Ownership Per Runtime
+## 2. 各运行时的归属范围
 
-### Electron Main Process
+### Electron 主进程
 
-The Electron main process owns:
+Electron 主进程归属：
 
-1. Desktop application lifecycle.
-2. Native window creation and top-level navigation bootstrap.
-3. Native file and folder pickers.
-4. Resolution of app-data directories and project path access handoff.
-5. Registration of controlled IPC entry points.
-6. Spawning and supervising the local worker process.
-7. Launching external preview helpers when the system PDF viewer is used.
-8. Guarding privileged desktop capabilities so they are not executed directly in the renderer.
+1. 桌面应用生命周期。
+2. 原生窗口创建与顶层导航引导。
+3. 原生文件与文件夹选择器。
+4. 应用数据目录解析及项目路径访问移交。
+5. 受控 IPC 入口点的注册。
+6. 本地 worker 进程的派生与监管。
+7. 使用系统 PDF 查看器时启动外部预览辅助程序。
+8. 守护特权桌面能力，确保其不在渲染进程中直接执行。
 
-The main process does **not** own heavy LaTeX builds, domain orchestration, or UI rendering.
+主进程**不**归属繁重的 LaTeX 构建、领域编排或 UI 渲染。
 
-### Renderer Process
+### 渲染进程
 
-The renderer owns:
+渲染进程归属：
 
-1. Screen rendering and interaction state.
-2. User-driven actions such as entering research input, reviewing a research card, converting to project, selecting a template, editing normalized structure, triggering a build, and opening preview/export actions.
-3. Display of loading, success, failure, and empty states.
-4. Rendering human-readable build feedback that has already been prepared by the application layer.
+1. 页面渲染与交互状态。
+2. 用户驱动的操作，如输入研究内容、审阅研究卡片、转换为项目、选择模板、编辑规范化结构、触发构建，以及打开预览/导出操作。
+3. 加载、成功、失败和空状态的展示。
+4. 渲染由应用层已准备好的可读构建反馈。
 
-The renderer does **not** own heavy build execution, direct database control, or filesystem/process privileges beyond approved IPC calls.
+渲染进程**不**归属繁重构建执行、直接数据库控制，或超出已批准 IPC 调用的文件系统/进程特权。
 
-### Local Worker Runtime
+### 本地 Worker 运行时
 
-The local worker owns:
+本地 worker 归属：
 
-1. Controlled LaTeX build execution.
-2. Toolchain invocation through the managed `latexmk + xelatex + BibTeX` pipeline.
-3. Build workspace preparation from a project revision snapshot.
-4. Collection of raw build logs, artifact outputs, and execution-level failure details.
-5. Returning structured execution results back to the application layer.
+1. 受控 LaTeX 构建执行。
+2. 通过受管 `latexmk + xelatex + BibTeX` 流水线进行工具链调用。
+3. 从项目修订快照准备构建工作空间。
+4. 原始构建日志、产物输出及执行层失败详情的收集。
+5. 将结构化执行结果返回给应用层。
 
-The worker does **not** own desktop windowing, long-lived UI state, or product-level screen decisions.
+worker **不**归属桌面窗口管理、长生命周期 UI 状态或产品层页面决策。
 
-### Optional Online Services
+### 可选在线服务
 
-Optional online services are managed separately from the local desktop runtimes.
+可选在线服务与本地桌面运行时分开管理。
 
-They may include:
+可能包括：
 
-1. AI provider access for structured summarization or repair suggestions.
-2. Optional remote error aggregation.
-3. Optional retrieval-related network access required to resolve supported research inputs.
+1. 用于结构化摘要或修复建议的 AI 提供方访问。
+2. 可选的远程错误聚合。
+3. 解析所支持研究输入所需的可选检索相关网络访问。
 
-These services are supporting dependencies, not the primary runtime host of the app.
+这些服务是支撑依赖，而非应用的主要运行时宿主。
 
-## 3. Environment Boundary List
+## 3. 环境边界清单
 
-Only the following environment dependency categories are required for Step 2:
+第 2 步仅需以下环境依赖类别：
 
 1. `local_database`
-   The local relational store used by the desktop app, implemented with SQLite.
+   桌面应用使用的本地关系存储，以 SQLite 实现。
 
 2. `local_filesystem_storage`
-   The filesystem boundary used for project folders, project-local metadata, build artifacts, global asset storage, template materialization, logs, and caches.
+   用于项目文件夹、项目本地元数据、构建产物、全局资产存储、模板物化、日志和缓存的文件系统边界。
 
 3. `ai_provider`
-   The model-facing dependency used when the product needs structured summarization or readable repair suggestions.
+   当产品需要结构化摘要或可读修复建议时所使用的模型依赖。
 
 4. `local_worker_runtime`
-   The isolated local execution environment that runs the managed LaTeX toolchain and related heavy work.
+   运行受管 LaTeX 工具链及相关繁重任务的隔离本地执行环境。
 
 5. `optional_error_tracking`
-   A conditional remote error-reporting dependency that may be enabled without becoming a hard base-game requirement.
+   可选的远程错误上报依赖，可按需启用，但不成为基础游戏的硬性要求。
 
-No additional future-only service categories should be frozen here.
-In particular, Step 2 does not add collaboration backends, sync services, auth platforms, queue infrastructure, or remote build infrastructure.
+此处不应冻结任何未来才需要的服务类别。
+特别地，第 2 步不新增协作后端、同步服务、认证平台、队列基础设施或远程构建基础设施。
 
-## 4. Local Storage Layout
+## 4. 本地存储布局
 
-The local storage boundary is frozen into two layers.
+本地存储边界冻结为两层。
 
-### Project-Local Storage
+### 项目本地存储
 
-Each paper project folder owns the user-visible project files plus a project-local metadata directory:
+每个论文项目文件夹拥有用户可见的项目文件，以及一个项目本地元数据目录：
 
 1. `.hso/`
-   Project-local metadata, revision-relevant state, build-relevant local bookkeeping, and project-scoped outputs that should move with the project folder.
+   项目本地元数据、修订相关状态、构建相关本地记录，以及应随项目文件夹一同移动的项目范围输出。
 
-2. Project-visible content files
-   The normalized paper content, project-specific materials, and generated outputs that the user expects to travel with the project.
+2. 项目可见内容文件
+   规范化的论文内容、项目专属素材，以及用户预期随项目一同移动的生成输出。
 
-Project-local storage must remain portable with the project folder.
-If the user moves the project directory to another machine with the same supported app environment, the project-local metadata and outputs should move with it.
+项目本地存储必须保持可与项目文件夹一同迁移的可携性。
+若用户将项目目录移至另一台具有相同受支持应用环境的机器，项目本地元数据和输出应随之迁移。
 
-### Global App-Data Storage
+### 全局应用数据存储
 
-Global app-data owns resources that should not be duplicated per project:
+全局应用数据归属不应按项目重复的资源：
 
-1. Global SQLite database.
-2. Global asset store for reusable assets under the frozen ownership model.
-3. Managed LaTeX toolchain installation.
-4. App-level caches.
-5. Cross-project logs and diagnostics.
+1. 全局 SQLite 数据库。
+2. 在冻结归属模型下可复用资产的全局资产存储。
+3. 受管 LaTeX 工具链安装。
+4. 应用级缓存。
+5. 跨项目日志与诊断信息。
 
-Global app-data is machine-local support infrastructure.
-It is not required to move with one specific project folder.
+全局应用数据是机器本地的支撑基础设施。
+不要求其随某个特定项目文件夹一同移动。
 
-## 5. Quality Boundary List
+## 5. 质量边界清单
 
-The minimum required quality infrastructure for v1 is:
+v1 最小必需质量基础设施为：
 
-1. Structured logs.
-   Every major application and worker action should emit machine-readable logs suitable for local debugging.
+1. 结构化日志。
+   每个主要应用与 worker 操作均应输出适合本地调试的机器可读日志。
 
-2. Trace IDs.
-   Cross-runtime actions should be traceable from UI-triggered request to worker outcome and visible failure.
+2. Trace ID。
+   跨运行时操作应可从 UI 触发的请求追踪至 worker 输出及可见失败。
 
-3. Focused automated tests.
-   The repository should include small, purpose-built automated tests for contracts, orchestration boundaries, and critical regressions rather than waiting for a late broad test phase.
+3. 聚焦的自动化测试。
+   仓库应包含针对契约、编排边界和关键回归的小型、专项自动化测试，而非等待后期集中测试阶段。
 
-4. Manual regression checklist.
-   The base game flow should have a maintained manual checklist that can be run before milestone acceptance.
+4. 手动回归检查清单。
+   基础游戏流程应有一份维护中的手动检查清单，可在里程碑验收前运行。
 
-5. Bug-to-test workflow.
-   When a failure mode is discovered, the team should capture a reproducible regression case or explicit checklist item so the same bug is less likely to recur silently.
+5. 缺陷转测试工作流。
+   发现故障模式时，团队应记录可复现的回归用例或明确的检查清单项，以降低同一缺陷再次悄然出现的概率。
 
-These items are required engineering infrastructure, not deferred polish.
+以上为必需的工程基础设施，不是延后的锦上添花项。
 
-## 6. Out-Of-Scope For Step 2
+## 6. 第 2 步范围外内容
 
-The following topics would prematurely enter Step 3 and must not be frozen in this document:
+以下主题将过早进入第 3 步，不得在本文档中冻结：
 
-1. The final entity list for the domain model.
-2. Required fields for domain entities.
-3. Database table definitions or schema details.
-4. Relationship diagrams between domain entities.
-5. Screen-specific data payload schemas.
-6. Exact IPC payload field sets beyond the fact that shared contracts exist.
+1. 领域模型的最终实体列表。
+2. 领域实体的必需字段。
+3. 数据库表定义或 schema 细节。
+4. 领域实体之间的关系图。
+5. 页面专属数据载荷 schema。
+6. 超出共享契约存在这一事实之外的精确 IPC 载荷字段集。
 
-Step 2 defines boundaries and ownership only.
-Step 3 will define the domain model that lives within those boundaries.
+第 2 步仅定义边界与归属。
+第 3 步将定义存在于这些边界之内的领域模型。
 
-## 7. Verification Notes
+## 7. 验证说明
 
-Step 2 should be validated against the following checks:
+第 2 步应依据以下检查项进行验证：
 
-1. Every top-level repository part has one clear responsibility.
-2. No heavy LaTeX build step is assigned to the renderer.
-3. The environment list contains only required runtime dependency categories.
-4. Project-local `.hso/` data and project outputs can move with the project folder.
-5. Global SQLite, global asset storage, toolchain files, and caches do not need to be duplicated per project.
-6. The quality boundary is treated as required infrastructure rather than optional later hardening.
-7. This document does not define Step 3 entities, fields, or relationships.
+1. 每个顶层仓库部分均有唯一明确的职责。
+2. 未将繁重的 LaTeX 构建步骤分配给渲染进程。
+3. 环境列表仅包含必需的运行时依赖类别。
+4. 项目本地 `.hso/` 数据及项目输出可随项目文件夹一同移动。
+5. 全局 SQLite、全局资产存储、工具链文件和缓存无需按项目重复存储。
+6. 质量边界被视为必需基础设施，而非可选的后期加固项。
+7. 本文档未定义第 3 步的实体、字段或关系。

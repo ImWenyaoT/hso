@@ -1,470 +1,470 @@
-# HSO Base Game Implementation Plan
+# HSO 基础游戏实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: use a plan-execution workflow and implement this document task-by-task. Every step below uses checkbox syntax and includes a validation test.
+> **致 AI 开发者：** 必须掌握的子技能：使用计划-执行工作流，逐任务实施本文档。以下每个步骤均采用 checkbox 语法，并包含验证测试。
 
-**Goal:** Build the HSO base game: a user can enter a research starting point, get a structured research card, convert it into a paper project, organize a minimal paper structure, run a LaTeX build, and preview or export the resulting PDF in the desktop app.
+**目标：** 构建 HSO 基础游戏：用户可以输入研究起点，获得结构化研究卡片，将其转化为论文项目，组织最简论文结构，运行 LaTeX 构建，并在桌面应用中预览或导出生成的 PDF。
 
-**Architecture:** Build a single desktop application around the paper project as the core object. Keep the UI thin, keep orchestration in the application layer, use a local relational database for structured data, local filesystem storage for build-relevant files, and a separate local LaTeX worker for builds.
+**架构：** 围绕论文项目作为核心对象，构建单一桌面应用。保持 UI 轻薄，将编排逻辑置于应用层，使用本地关系型数据库存储结构化数据，本地文件系统存储构建相关文件，并使用独立的本地 LaTeX worker 负责构建。
 
-**Tech Stack:** Electron, React, Tailwind CSS, shadcn/ui, TypeScript, Node.js, Vercel AI SDK, SQLite, Drizzle, local filesystem, local worker process, `latexmk + xelatex + BibTeX`, structured logging, with Python only for auxiliary scripts and analysis tooling.
+**技术栈：** Electron, React, Tailwind CSS, shadcn/ui, TypeScript, Node.js, Vercel AI SDK, SQLite, Drizzle, 本地文件系统, 本地 worker 进程, `latexmk + xelatex + BibTeX`, 结构化日志记录；Python 仅用于辅助脚本和分析工具。
 
 ---
 
-## Decision Freeze
-
-The following decisions are already locked for the base game and should not be reopened during implementation unless the product direction changes:
+## 决策冻结
+
+以下决策已在基础游戏阶段锁定，除非产品方向发生变化，否则实施过程中不得重新讨论：
 
-1. Research card generation uses **real retrieval plus structured summarization**, not pure LLM generation.
-2. Supported research inputs are **DOI, arXiv ID, paper title, and paper URL**.
-3. The research card must separate **project-importable structured content** from **notes/noise that must not be imported**.
-4. The paper project uses an **ordered section model**, not a free-form editor and not a raw LaTeX IDE.
-5. Templates are **predefined template packages with slot-filling and mapping rules**, not arbitrary user-imported LaTeX projects.
-6. The first release should support a **small honest template set**. Start with `generic article`, `IEEE`, and `Elsevier`. Add at most one more only if it fits the same structure model cleanly.
-7. PDF files used during retrieval are **ingestion inputs for information extraction**, not first-class paper assets by default.
-8. Build execution should bind to a **project revision snapshot** and record the source revision used for each build.
-9. Build job states for the first release are **queued**, **running**, **succeeded**, and **failed**. Cancellation is out of scope for v1.
-10. Preview should rely on the embedded desktop view or the system PDF viewer where appropriate, while always offering direct open and export actions.
-11. The first release is allowed to run as a **local single-user assistant** with no full authentication system.
-12. Build failure UX must provide **error location, readable summary, and repair suggestion**. Agent-assisted repair is an extension, not a required v1 baseline.
-13. Desktop packaging targets **distribution level 1-2**: local use and small-scale internal testing, not app-store-grade public distribution.
-14. Test planning and regression capture are **required from the beginning**, not a late hardening phase.
-15. The default LaTeX toolchain for v1 is **`latexmk + xelatex + BibTeX`**.
-16. Asset ownership must support **`project_only`**, **`selected_projects`**, and **`all_projects`** visibility modes.
-17. Retrieval priority should be frozen as **DOI -> arXiv ID -> title search -> URL parsing helper -> user confirmation**.
-18. The app must detect the controlled LaTeX toolchain before first build and guide the user through a managed installation if it is missing.
-19. Project-local metadata must live under **`.hso`** inside each project folder, while global SQLite, global asset store, toolchain, and caches must live under app data.
-20. Windows remains in v1 scope, and the formal release gate must pass on both macOS and Windows.
-21. **TypeScript** is the primary implementation language for the desktop shell, renderer, orchestration layer, shared contracts, and local worker; **Python** is auxiliary only and may be used for scripts, analysis, or offline tooling.
+1. 研究卡片生成使用**真实检索加结构化摘要**，而非纯 LLM 生成。
+2. 支持的研究输入类型为 **DOI、arXiv ID、论文标题和论文 URL**。
+3. 研究卡片必须将**可导入项目的结构化内容**与**不得导入的备注/噪声**明确分离。
+4. 论文项目使用**有序章节模型**，而非自由格式编辑器，也不是原始 LaTeX IDE。
+5. 模板为**预定义模板包，支持插槽填充和映射规则**，不允许用户随意导入 LaTeX 项目。
+6. 第一版应支持**小而诚实的模板集**。从 `generic article`、`IEEE` 和 `Elsevier` 开始，最多再增加一个，且必须完全适配同一结构模型。
+7. 检索过程中使用的 PDF 文件是**用于信息提取的导入输入**，默认情况下不是一等论文资产。
+8. 构建执行必须绑定到**项目版本快照**，并为每次构建记录所使用的源版本。
+9. 第一版的构建任务状态为 **`queued`**、**`running`**、**`succeeded`** 和 **`failed`**。取消操作不在 v1 范围内。
+10. 预览应优先使用内嵌桌面视图或系统 PDF 查看器，同时始终提供直接打开和导出操作。
+11. 第一版允许作为**本地单用户助手**运行，不需要完整的身份认证系统。
+12. 构建失败的 UX 必须提供**错误位置、可读摘要和修复建议**。Agent 辅助修复是扩展功能，不是 v1 基线要求。
+13. 桌面打包目标为**分发级别 1-2**：本地使用和小规模内部测试，不要求应用商店级别的公开分发。
+14. 测试规划和回归捕获**从一开始就是必需的**，不是后期加固阶段才引入的工作。
+15. v1 的默认 LaTeX 工具链为 **`latexmk + xelatex + BibTeX`**。
+16. 资产所有权必须支持 **`project_only`**、**`selected_projects`** 和 **`all_projects`** 三种可见性模式。
+17. 检索优先级冻结为：**DOI -> arXiv ID -> 标题搜索 -> URL 解析辅助 -> 用户确认**。
+18. 应用必须在首次构建前检测受控的 LaTeX 工具链，若缺失则引导用户完成受控安装。
+19. 项目本地元数据必须存放在每个项目文件夹内的 **`.hso`** 目录下，而全局 SQLite、全局资产存储、工具链和缓存必须存放在应用数据目录下。
+20. Windows 仍在 v1 范围内，正式发布门槛必须在 macOS 和 Windows 上均通过。
+21. **TypeScript** 是桌面 shell、渲染进程、编排层、共享契约和本地 worker 的主要实现语言；**Python** 仅为辅助语言，可用于脚本、分析或离线工具。
 
-## Base Game Scope
+## 基础游戏范围
 
-This plan only covers the minimum usable product loop:
+本计划仅涵盖最小可用产品循环：
 
-1. User enters a keyword or a seed paper reference.
-2. System retrieves objective paper data and generates a structured research card.
-3. User converts selected structured content into a paper project.
-4. User selects a supported template and edits a basic paper structure.
-5. User attaches a small set of build-relevant assets.
-6. System runs a LaTeX build and shows preview, status, and human-readable errors inside the desktop experience.
+1. 用户输入关键词或种子论文引用。
+2. 系统检索客观论文数据并生成结构化研究卡片。
+3. 用户将所选结构化内容转化为论文项目。
+4. 用户选择支持的模板并编辑基础论文结构。
+5. 用户附加少量构建相关资产。
+6. 系统运行 LaTeX 构建，并在桌面体验中展示预览、状态和可读错误信息。
 
-This plan does **not** cover collaboration, advanced real-time sync, rich analytics, machine learning, arbitrary LaTeX project import, complex template compatibility, or full IDE behavior.
+本计划**不涵盖**协作、高级实时同步、丰富分析、机器学习、任意 LaTeX 项目导入、复杂模板兼容性或完整 IDE 功能。
 
-## Working Rules For AI Developers
+## AI 开发者工作规范
 
-1. Keep each task small and independently reviewable.
-2. Do not introduce any feature not required for the base game.
-3. Preserve clear boundaries between information retrieval, paper project management, and LaTeX build execution.
-4. Treat every validation step as mandatory.
-5. If a step fails validation, stop and fix it before moving on.
-6. Do not replace any frozen decision above with a “temporary flexible design.”
-7. When a bug or failure mode is discovered, leave behind a reproducible test case or regression checklist whenever possible.
+1. 保持每个任务小而独立，便于审查。
+2. 不引入任何基础游戏不需要的功能。
+3. 在信息检索、论文项目管理和 LaTeX 构建执行之间保持清晰边界。
+4. 将每个验证步骤视为强制要求。
+5. 若某步骤未通过验证，停下来修复后再继续。
+6. 不得以"临时灵活设计"替换上述任何已冻结决策。
+7. 当发现 bug 或失败模式时，尽可能留下可复现的测试用例或回归检查清单。
 
-## Task 1: Lock The Base Game Contract
+## 任务 1：锁定基础游戏契约
 
-**Target outcome:** The team agrees on the exact user journey, object names, and non-goals for the first build.
+**目标成果：** 团队就第一次构建的精确用户旅程、对象名称和非目标达成一致。
 
-- [ ] **Step 1: Create a one-page base game brief**
-Write a short project brief that defines the six core user actions in order: enter input, receive research card, convert to paper project, choose template, edit structure, build and preview.
+- [ ] **步骤 1：创建一页基础游戏简报**
+撰写一份简短的项目简报，按顺序定义六个核心用户操作：输入内容、接收研究卡片、转化为论文项目、选择模板、编辑结构、构建并预览。
 
-Test:
-- Review the brief and confirm every action maps directly to a sentence in [PRD.md](/Users/edward/Documents/hso/memory_bank/PRD.md).
-- Confirm the brief contains no features outside the base game.
+测试：
+- 审查简报，确认每个操作都能直接对应 [PRD.md](/Users/edward/Documents/hso/memory_bank/PRD.md) 中的一句话。
+- 确认简报中不包含任何基础游戏范围之外的功能。
 
-- [ ] **Step 2: Freeze the core object vocabulary**
-Document the exact meaning of these objects: `research input`, `research card`, `paper project`, `template`, `section`, `asset`, `build job`, `build result`, `reference source`.
+- [ ] **步骤 2：冻结核心对象词汇表**
+记录以下对象的精确含义：`research input`、`research card`、`paper project`、`template`、`section`、`asset`、`build job`、`build result`、`reference source`。
 
-Test:
-- Ask a second developer to explain the difference between `research card` and `paper project` using only the document.
-- The explanation must match the PRD without ambiguity.
+测试：
+- 请另一位开发者仅凭文档解释 `research card` 和 `paper project` 之间的区别。
+- 解释必须与 PRD 无歧义地匹配。
 
-- [ ] **Step 3: Freeze non-goals**
-Create an explicit non-goals list for the first implementation: no collaboration, no arbitrary LaTeX project import, no subjective academic judgment, no full-featured editor, no build cancellation, no custom user template upload, no app-store-grade distribution workflow in v1.
+- [ ] **步骤 3：冻结非目标列表**
+为第一次实施创建明确的非目标列表：无协作、无任意 LaTeX 项目导入、无主观学术判断、无全功能编辑器、无构建取消、无自定义用户模板上传、v1 无应用商店级分发流程。
 
-Test:
-- Review the list against [PRD.md](/Users/edward/Documents/hso/memory_bank/PRD.md) section 8.
-- Confirm no out-of-scope feature remains implied as “maybe included now.”
+测试：
+- 对照 [PRD.md](/Users/edward/Documents/hso/memory_bank/PRD.md) 第 8 节审查该列表。
+- 确认没有任何超出范围的功能仍被隐含为"也许现在包含"。
 
-## Task 2: Define Repository Skeleton And Delivery Boundaries
+## 任务 2：定义代码库骨架和交付边界
 
-**Target outcome:** AI developers know what top-level apps and services exist before writing implementation code.
+**目标成果：** AI 开发者在编写实现代码之前，了解顶层应用和服务的构成。
 
-- [ ] **Step 1: Define the minimum repository structure**
-Document the initial app and service layout for the base game: Electron desktop shell, renderer UI, application/orchestration layer, LaTeX worker, shared schema/contracts, and docs. Treat TypeScript as the default implementation language across all runtime-owned codepaths.
+- [ ] **步骤 1：定义最小代码库结构**
+记录基础游戏的初始应用和服务布局：Electron 桌面 shell、渲染进程 UI、应用/编排层、LaTeX worker、共享 schema/契约以及文档。将 TypeScript 作为所有运行时拥有代码路径的默认实现语言。
 
-Test:
-- Review the layout and verify every top-level part has exactly one clear responsibility.
-- Confirm there is no duplicate responsibility between desktop UI and worker.
-- Confirm no core runtime module silently introduces Python as a parallel mainline implementation language.
+测试：
+- 审查布局，确认每个顶层部分都有且仅有一个明确的职责。
+- 确认桌面 UI 与 worker 之间没有重复的职责。
+- 确认没有任何核心运行时模块将 Python 作为并行主线实现语言。
 
-- [ ] **Step 2: Define deployment ownership per runtime**
-Document which parts run inside the Electron main process, which parts run in the renderer, which parts run in the local worker runtime, and which optional online services are managed separately.
+- [ ] **步骤 2：定义各运行时的部署归属**
+记录哪些部分运行在 Electron 主进程中，哪些运行在渲染进程中，哪些运行在本地 worker 运行时中，以及哪些可选在线服务单独管理。
 
-Test:
-- Review the mapping against [tech_stack.md](/Users/edward/Documents/hso/memory_bank/tech_stack.md).
-- Confirm no heavy LaTeX build step is assigned to the renderer process.
+测试：
+- 对照 [tech_stack.md](/Users/edward/Documents/hso/memory_bank/tech_stack.md) 审查映射关系。
+- 确认没有任何繁重的 LaTeX 构建步骤被分配给渲染进程。
 
-- [ ] **Step 3: Define environment boundary list**
-List the required environment categories only: local database, local filesystem storage, AI provider, local worker runtime, and optional error tracking.
+- [ ] **步骤 3：定义环境边界列表**
+仅列出所需的环境类别：本地数据库、本地文件系统存储、AI 提供商、本地 worker 运行时，以及可选的错误追踪。
 
-Test:
-- Confirm every category maps to a required runtime dependency.
-- Confirm no optional future-only service is included.
+测试：
+- 确认每个类别都对应一个必需的运行时依赖。
+- 确认没有任何仅面向未来的可选服务被包含在内。
 
-- [ ] **Step 4: Define local storage layout**
-Document the frozen directory split between project-local storage and global app-data storage. Project-local metadata must live under `.hso/`, while global SQLite, global asset store, controlled toolchain, and caches live under app data.
+- [ ] **步骤 4：定义本地存储布局**
+记录项目本地存储与全局应用数据存储之间已冻结的目录划分。项目本地元数据必须存放在 `.hso/` 下，而全局 SQLite、全局资产存储、受控工具链和缓存存放在应用数据目录下。
 
-Test:
-- Confirm project-local build outputs and metadata can move with the project folder.
-- Confirm shared assets and toolchain data do not need to be duplicated per project.
+测试：
+- 确认项目本地构建输出和元数据可随项目文件夹迁移。
+- 确认共享资产和工具链数据不需要在每个项目中重复存储。
 
-- [ ] **Step 5: Define quality boundary list**
-Document the minimum quality infrastructure for v1: structured logs, trace ids, focused automated tests, manual regression checklist, and a bug-to-test workflow.
+- [ ] **步骤 5：定义质量边界列表**
+记录 v1 最低质量基础设施：结构化日志、trace ID、聚焦的自动化测试、手动回归检查清单，以及 bug 转测试的工作流程。
 
-Test:
-- Confirm each item supports either local debugging or regression prevention.
-- Confirm the list is treated as required infrastructure rather than deferred polish.
+测试：
+- 确认每一项均能支持本地调试或回归预防。
+- 确认该列表被视为必需基础设施，而非延后的美化工作。
 
-## Task 3: Model The Core Domain
+## 任务 3：建模核心领域
 
-**Target outcome:** The base game data model is stable enough to support the full first user loop.
+**目标成果：** 基础游戏数据模型足够稳定，能够支撑完整的第一版用户循环。
 
-- [ ] **Step 1: Define the minimum entities**
-Document the minimum entities required for the base game: `research_card`, `paper_project`, `paper_section`, `template`, `asset`, `reference_source`, `build_job`, `build_artifact`, and `error_event`. Treat `user` as optional infrastructure for later expansion, not a required v1 domain object.
+- [ ] **步骤 1：定义最小实体集**
+记录基础游戏所需的最小实体：`research_card`、`paper_project`、`paper_section`、`template`、`asset`、`reference_source`、`build_job`、`build_artifact` 和 `error_event`。将 `user` 视为后续扩展的可选基础设施，而非 v1 必需的领域对象。
 
-Test:
-- Check that each entity directly supports at least one step of the base game flow.
-- Remove any entity that does not support a first-release user action.
+测试：
+- 检查每个实体是否直接支持基础游戏流程中的至少一个步骤。
+- 移除任何不支持第一版用户操作的实体。
 
-- [ ] **Step 2: Define required fields for each entity**
-List only the fields needed to make the first release work, including identifiers, status fields, timestamps, revision fields, and minimal metadata.
+- [ ] **步骤 2：定义每个实体的必要字段**
+仅列出第一版工作所需的字段，包括标识符、状态字段、时间戳、版本字段和最小元数据。
 
-Test:
-- For each field, ask “what first-release behavior breaks if this field does not exist?”
-- If there is no concrete answer, remove the field.
+测试：
+- 对于每个字段，问自己："如果这个字段不存在，第一版的哪个功能会中断？"
+- 若无具体答案，则移除该字段。
 
-- [ ] **Step 3: Define entity relationships**
-Document the relationships between research card and paper project, paper project and template, paper project and sections, paper project and assets, paper project and reference sources, paper project and build job, and build job and build artifact.
+- [ ] **步骤 3：定义实体关系**
+记录以下关系：研究卡片与论文项目、论文项目与模板、论文项目与章节、论文项目与资产、论文项目与参考来源、论文项目与构建任务、构建任务与构建产物。
 
-Test:
-- Walk through the base game flow using only the relationship diagram or table.
-- Confirm the flow can be explained without inventing extra objects.
+测试：
+- 仅凭关系图或关系表，走通基础游戏流程。
+- 确认整个流程无需发明额外对象即可解释清楚。
 
-## Task 4: Plan The User-Facing Screens
+## 任务 4：规划用户界面页面
 
-**Target outcome:** The desktop app includes only the minimum screens needed to complete the base game loop.
+**目标成果：** 桌面应用只包含完成基础游戏循环所需的最少页面。
 
-- [ ] **Step 1: Define the minimum route list**
-Document the minimum routes or screens: input screen, research card result screen, paper project detail screen, template selection area, asset area, build status area, and PDF preview/export area.
+- [ ] **步骤 1：定义最小路由列表**
+记录最小路由或页面：输入页面、研究卡片结果页面、论文项目详情页面、模板选择区域、资产区域、构建状态区域、PDF 预览/导出区域。
 
-Test:
-- Trace the full user journey from start to preview.
-- Confirm every route exists for a reason and no extra route is needed.
+测试：
+- 从头到预览，追踪完整的用户旅程。
+- 确认每个路由的存在都有其理由，且不需要额外的路由。
 
-- [ ] **Step 2: Define each screen’s single responsibility**
-For every screen, write one sentence for its main job and one sentence for what it must not do.
+- [ ] **步骤 2：定义每个页面的单一职责**
+对于每个页面，用一句话说明其主要职责，再用一句话说明其不应做什么。
 
-Test:
-- Review the list and confirm no screen owns both orchestration logic and heavy domain logic.
-- If a screen appears to “know too much,” move that responsibility back to the application layer.
+测试：
+- 审查列表，确认没有任何页面同时拥有编排逻辑和繁重的领域逻辑。
+- 若某页面"知道太多"，将该职责移回应用层。
 
-- [ ] **Step 3: Define empty, loading, success, and error states**
-Document the state variants needed for each screen in the first release.
+- [ ] **步骤 3：定义空态、加载态、成功态和错误态**
+记录第一版中每个页面所需的状态变体。
 
-Test:
-- For every screen, verify there is a visible behavior for “nothing yet,” “in progress,” “finished,” and “failed.”
-- Confirm no state depends on future collaboration or always-online behavior.
+测试：
+- 对于每个页面，验证"尚无内容"、"进行中"、"已完成"和"已失败"均有可见的行为。
+- 确认没有任何状态依赖于未来的协作功能或始终在线的行为。
 
-## Task 5: Plan The Research Input Flow
+## 任务 5：规划研究输入流程
 
-**Target outcome:** A user can start from a keyword or seed paper and receive a structured research card.
+**目标成果：** 用户可以从关键词或种子论文开始，获得结构化研究卡片。
 
-- [ ] **Step 1: Define supported input types**
-Document the exact first-release input types: keyword text, DOI, arXiv ID, paper title, and paper URL. Explicitly reject arbitrary free-form reference text.
+- [ ] **步骤 1：定义支持的输入类型**
+记录第一版精确支持的输入类型：关键词文本、DOI、arXiv ID、论文标题和论文 URL。明确拒绝任意自由格式的引用文本。
 
-Test:
-- Confirm all supported input types align with the product decision freeze.
-- Confirm no sixth input type is silently added.
+测试：
+- 确认所有支持的输入类型与产品决策冻结一致。
+- 确认没有第六种输入类型被悄悄加入。
 
-- [ ] **Step 2: Define retrieval priority and confirmation flow**
-Document the first-release lookup order as DOI lookup, arXiv ID lookup, title search, URL parsing helper, and candidate confirmation by the user before solidifying a `reference_source`.
+- [ ] **步骤 2：定义检索优先级和确认流程**
+记录第一版的查找顺序：DOI 查询、arXiv ID 查询、标题搜索、URL 解析辅助，以及在固化 `reference_source` 前由用户确认候选项。
 
-Test:
-- Confirm URL is treated only as a parsing helper rather than the primary retrieval path.
-- Confirm title search can fall back to a candidate list rather than assuming a single exact match.
+测试：
+- 确认 URL 仅作为解析辅助，而非主要检索路径。
+- 确认标题搜索可以回退至候选列表，而非假设存在唯一精确匹配。
 
-- [ ] **Step 3: Define the research card output contract**
-Document the minimum research card sections for the base game:
-`topic_label`, `key_papers`, `trend_summary`, `distribution_summary`, `project_importable_sections`, `reference_candidates`, `notes`, and `convert_to_project_action`.
-Mark which fields are importable into the paper project and which are not.
+- [ ] **步骤 3：定义研究卡片输出契约**
+记录基础游戏的最小研究卡片结构：
+`topic_label`、`key_papers`、`trend_summary`、`distribution_summary`、`project_importable_sections`、`reference_candidates`、`notes` 和 `convert_to_project_action`。
+标注哪些字段可导入论文项目，哪些不可导入。
 
-Test:
-- Confirm the output is structured and objective rather than opinionated.
-- Confirm each fact-bearing section can be traced back to retrieved sources.
+测试：
+- 确认输出是结构化且客观的，而非主观判断性的。
+- 确认每个包含事实的部分都可追溯至检索到的来源。
 
-- [ ] **Step 4: Define failure behavior for research generation**
-Document what happens when the system cannot generate a usable research card: visible error, retry action, and preserved user input.
+- [ ] **步骤 4：定义研究生成失败时的行为**
+记录系统无法生成可用研究卡片时的处理方式：显示可见错误、提供重试操作、保留用户输入。
 
-Test:
-- Run a tabletop review of a failed research request.
-- Confirm the user is never dropped into a dead end with no recovery path.
+测试：
+- 对失败的研究请求进行桌面推演。
+- 确认用户不会陷入没有恢复路径的死胡同。
 
-## Task 6: Plan The Convert-To-Project Flow
+## 任务 6：规划转化为项目的流程
 
-**Target outcome:** A research card can become a paper project without hidden manual work.
+**目标成果：** 研究卡片可以转化为论文项目，无需隐藏的手动操作。
 
-- [ ] **Step 1: Define the conversion action**
-Document exactly what data moves from research card into paper project creation. Import only project-ready structured sections, selected title candidate, and selected reference candidates. Do not import raw notes, retrieval traces, or agent reasoning.
+- [ ] **步骤 1：定义转化操作**
+记录从研究卡片导入论文项目创建的确切数据内容。仅导入项目就绪的结构化章节、选定的标题候选项和选定的参考候选项。不导入原始备注、检索轨迹或 Agent 推理过程。
 
-Test:
-- Confirm the conversion does not copy unnecessary research-only metadata.
-- Confirm the paper project starts with enough context to be usable immediately.
+测试：
+- 确认转化过程不复制不必要的仅用于研究的元数据。
+- 确认论文项目启动时具备足够的上下文，可以立即使用。
 
-- [ ] **Step 2: Define the initial paper project state**
-Document the required initial state for a new paper project: title placeholder or imported title candidate, selected source card, ordered sections, no assets yet, no completed builds yet, template unselected or defaulted, and initial revision `1`.
+- [ ] **步骤 2：定义论文项目的初始状态**
+记录新论文项目所需的初始状态：标题占位符或导入的标题候选项、选定的源卡片、有序章节、尚无资产、尚无已完成的构建、模板未选或默认，以及初始版本号 `1`。
 
-Test:
-- Review the initial state and confirm a user can continue the flow without hidden setup steps.
+测试：
+- 审查初始状态，确认用户无需隐藏的设置步骤即可继续流程。
 
-- [ ] **Step 3: Define project creation failure handling**
-Document what happens if project creation fails after the user clicks convert.
+- [ ] **步骤 3：定义项目创建失败处理**
+记录用户点击转化后若项目创建失败时的处理方式。
 
-Test:
-- Confirm the user can retry without losing the source research card.
-- Confirm the failure state is visible in the UI and in logs.
+测试：
+- 确认用户可以重试，且不会丢失源研究卡片。
+- 确认失败状态在 UI 和日志中均可见。
 
-## Task 7: Plan The Template Selection Flow
+## 任务 7：规划模板选择流程
 
-**Target outcome:** A paper project can be attached to a supported template in a controlled way.
+**目标成果：** 论文项目可以以受控方式关联到支持的模板。
 
-- [ ] **Step 1: Define the initial template catalog**
-Start the first release with `generic article`, `IEEE`, and `Elsevier`. Add at most one additional template only if it can reuse the same normalized section model and worker pipeline.
+- [ ] **步骤 1：定义初始模板目录**
+第一版从 `generic article`、`IEEE` 和 `Elsevier` 开始。仅在能够复用相同规范化章节模型和 worker 流水线的前提下，最多再增加一个模板。
 
-Test:
-- Confirm every listed template is supportable by the worker and preview flow.
-- Remove any template that requires special-case logic not yet planned.
+测试：
+- 确认每个列出的模板均可由 worker 和预览流程支持。
+- 移除任何需要尚未规划的特殊处理逻辑的模板。
 
-- [ ] **Step 2: Define template selection behavior**
-Document when a template is selected, replaced, or reset. The project should preserve normalized content and assets while applying template-specific title labels, section labels, and rendering rules. If a template cannot map a section cleanly, the system must surface that mismatch explicitly.
+- [ ] **步骤 2：定义模板选择行为**
+记录模板何时被选中、替换或重置。项目应保留规范化内容和资产，同时应用模板特定的标题标签、章节标签和渲染规则。若模板无法干净地映射某个章节，系统必须明确显示该不匹配情况。
 
-Test:
-- Review the behavior and confirm template changes do not silently destroy user-managed content or assets.
+测试：
+- 审查该行为，确认模板更换不会悄悄破坏用户管理的内容或资产。
 
-- [ ] **Step 3: Define unsupported-template behavior**
-Document how the system responds when a user wants something outside the supported catalog.
+- [ ] **步骤 3：定义不支持模板时的行为**
+记录当用户需要支持目录之外的模板时，系统如何响应。
 
-Test:
-- Confirm the UX clearly says “not supported yet” instead of pretending broader compatibility exists.
+测试：
+- 确认 UX 明确提示"暂不支持"，而非假装具备更广泛的兼容性。
 
-## Task 8: Plan The Paper Structure Flow
+## 任务 8：规划论文结构流程
 
-**Target outcome:** A user can manage the minimum paper structure without needing a full free-form editor.
+**目标成果：** 用户可以管理最小论文结构，无需完整的自由格式编辑器。
 
-- [ ] **Step 1: Define the editable structure units**
-Document the first-release editable units as ordered normalized sections, such as `title`, `abstract`, `introduction`, `related_work`, `method`, `results`, `conclusion`, and `references_placeholder`. Template-facing display labels may differ, but the project model should keep stable normalized section types.
+- [ ] **步骤 1：定义可编辑的结构单元**
+记录第一版可编辑单元为有序规范化章节，例如 `title`、`abstract`、`introduction`、`related_work`、`method`、`results`、`conclusion` 和 `references_placeholder`。模板展示标签可以不同，但项目模型应保持稳定的规范化章节类型。
 
-Test:
-- Confirm the unit list is enough to create a meaningful paper draft.
-- Confirm it does not imply full arbitrary LaTeX editing.
+测试：
+- 确认单元列表足以创建一份有意义的论文草稿。
+- 确认其不暗示任意的 LaTeX 编辑能力。
 
-- [ ] **Step 2: Define the minimum editing operations**
-Document the allowed operations for first release: create section, rename display label when allowed, reorder section, edit content, attach figure asset, remove section.
+- [ ] **步骤 2：定义最小编辑操作**
+记录第一版允许的操作：创建章节、在允许时重命名展示标签、重新排序章节、编辑内容、附加图片资产、删除章节。
 
-Test:
-- Walk through a simple paper setup and confirm each required action is covered.
-- Confirm no unnecessary “power user” editing mode is included.
+测试：
+- 走通一个简单的论文设置流程，确认每个必要操作均已覆盖。
+- 确认不包含任何不必要的"高级用户"编辑模式。
 
-- [ ] **Step 3: Define structure validation rules**
-Document a small set of validation rules, such as required title, no empty section labels, supported file types for figure uploads, and maximum asset count for first release.
+- [ ] **步骤 3：定义结构验证规则**
+记录一小组验证规则，例如：必须有标题、章节标签不能为空、图片上传支持的文件类型、第一版的最大资产数量。
 
-Test:
-- Review each rule and confirm it prevents a realistic failure in build or preview.
-- Remove any rule that exists only for theoretical completeness.
+测试：
+- 审查每条规则，确认其可预防构建或预览中的实际失败情况。
+- 移除任何仅出于理论完整性而存在的规则。
 
-## Task 9: Plan The Asset And Reference Flow
+## 任务 9：规划资产和参考文献流程
 
-**Target outcome:** Users can attach the minimum build-relevant files and keep reference data separate from noisy ingestion inputs.
+**目标成果：** 用户可以附加最少量的构建相关文件，并将参考数据与噪声导入输入分开保存。
 
-- [ ] **Step 1: Define supported asset types**
-Document the first-release supported build assets as figure images only. Model external paper references separately as structured `reference_source` records rather than generic file assets. Treat source PDFs as optional ingestion inputs, not first-class project assets by default, and store them locally only when needed.
+- [ ] **步骤 1：定义支持的资产类型**
+记录第一版支持的构建资产仅为图片文件。将外部论文引用单独建模为结构化的 `reference_source` 记录，而非通用文件资产。将源 PDF 视为可选导入输入而非默认的一等项目资产，仅在需要时本地存储。
 
-Test:
-- Confirm each asset or reference type supports a concrete base-game action.
-- Exclude any type that is not used by the first paper flow.
+测试：
+- 确认每种资产或引用类型都支持基础游戏中的具体操作。
+- 排除任何第一版论文流程不使用的类型。
 
-- [ ] **Step 2: Define asset ownership scope**
-Document the first-release asset visibility modes as `project_only`, `selected_projects`, and `all_projects`. `selected_projects` must allow the user to explicitly choose multiple projects. `all_projects` must expose the asset to every project without duplicating the file.
+- [ ] **步骤 2：定义资产所有权范围**
+记录第一版资产可见性模式为 `project_only`、`selected_projects` 和 `all_projects`。`selected_projects` 必须允许用户明确选择多个项目。`all_projects` 必须将资产暴露给所有项目，而不重复存储文件。
 
-Test:
-- Confirm the same asset can be reused across multiple projects without redundant storage.
-- Confirm the UI model supports both “share to all” and “share to selected projects.”
+测试：
+- 确认同一资产可跨多个项目复用，无需冗余存储。
+- 确认 UI 模型同时支持"共享给所有项目"和"共享给选定项目"。
 
-- [ ] **Step 2.5: Define shared asset storage behavior**
-Document that shared assets are copied into the global controlled asset store under app data, while projects record only asset references and never depend on external original file paths.
+- [ ] **步骤 2.5：定义共享资产存储行为**
+记录共享资产被复制到应用数据目录下的全局受控资产存储中，而项目仅记录资产引用，永不依赖外部原始文件路径。
 
-Test:
-- Confirm shared assets remain valid even if the source import path disappears.
-- Confirm project references can resolve against the global asset store without duplicating files.
+测试：
+- 确认即使源导入路径消失，共享资产仍然有效。
+- 确认项目引用可以通过全局资产存储解析，无需复制文件。
 
-- [ ] **Step 3: Define upload lifecycle**
-Document the upload states for build-relevant files: selected, uploading, stored, linked to project, failed.
+- [ ] **步骤 3：定义上传生命周期**
+记录构建相关文件的上传状态：已选中、上传中、已存储、已链接到项目、失败。
 
-Test:
-- Confirm every upload state has a visible UI state and a persistent system state.
+测试：
+- 确认每个上传状态都有可见的 UI 状态和持久化的系统状态。
 
-- [ ] **Step 4: Define asset failure handling**
-Document behavior for wrong file type, oversize file, upload failure, and broken linked asset.
+- [ ] **步骤 4：定义资产失败处理**
+记录文件类型错误、文件过大、上传失败和已链接资产损坏时的处理行为。
 
-Test:
-- Review each case and confirm the user is told what happened and what to do next.
+测试：
+- 审查每种情况，确认用户被告知发生了什么以及下一步应如何操作。
 
-## Task 10: Plan The Build Job Flow
+## 任务 10：规划构建任务流程
 
-**Target outcome:** Users can trigger a build from a paper project and track its outcome.
+**目标成果：** 用户可以从论文项目触发构建并追踪其结果。
 
-- [ ] **Step 1: Define build trigger rules**
-Document when a build can start, what minimum project state is required, and how duplicate clicks are handled. Each build must bind to a specific source revision snapshot.
+- [ ] **步骤 1：定义构建触发规则**
+记录构建可以启动的条件、所需的最小项目状态，以及如何处理重复点击。每次构建必须绑定到特定的源版本快照。
 
-Test:
-- Confirm the rules prevent invalid or duplicate builds from being created accidentally.
+测试：
+- 确认规则可防止无效或重复构建被意外创建。
 
-- [ ] **Step 2: Freeze build toolchain contract**
-Document the v1 build contract as `latexmk + xelatex + BibTeX`, and require supported templates to conform to this toolchain rather than introducing per-template build paths.
+- [ ] **步骤 2：冻结构建工具链契约**
+记录 v1 构建契约为 `latexmk + xelatex + BibTeX`，并要求支持的模板遵从该工具链，而非引入各模板独立的构建路径。
 
-Test:
-- Confirm the initial template catalog can be compiled through the same toolchain.
-- Confirm unsupported templates are rejected before they create toolchain fragmentation.
+测试：
+- 确认初始模板目录可通过同一工具链编译。
+- 确认不支持的模板在造成工具链碎片化之前被拒绝。
 
-- [ ] **Step 2.5: Define toolchain installation contract**
-Document that the app detects the controlled toolchain before first build, does not depend on a user-managed system TeX install, and provides an app-guided installation flow backed by a controlled installer script.
+- [ ] **步骤 2.5：定义工具链安装契约**
+记录应用在首次构建前检测受控工具链，不依赖用户自行管理的系统 TeX 安装，并通过受控安装脚本提供应用引导的安装流程。
 
-Test:
-- Confirm first-run build UX can succeed without prior manual TeX setup.
-- Confirm the controlled toolchain installs under app data rather than inside a project folder.
+测试：
+- 确认首次运行的构建 UX 无需事先手动配置 TeX 即可成功。
+- 确认受控工具链安装在应用数据目录下，而非项目文件夹内。
 
-- [ ] **Step 3: Define build job states**
-Document the build states as `queued`, `running`, `succeeded`, and `failed`.
+- [ ] **步骤 3：定义构建任务状态**
+记录构建状态为 `queued`、`running`、`succeeded` 和 `failed`。
 
-Test:
-- Confirm every state maps to a visible UI message and a stored backend status.
+测试：
+- 确认每个状态都映射到一条可见的 UI 消息和一个存储的后端状态。
 
-- [ ] **Step 4: Define build outputs**
-Document the minimum outputs: previewable PDF path, open-in-viewer action, export action, build log summary, failure summary, timestamp, and source project revision reference.
+- [ ] **步骤 4：定义构建输出**
+记录最小输出内容：可预览的 PDF 路径、在查看器中打开的操作、导出操作、构建日志摘要、失败摘要、时间戳和源项目版本引用。
 
-Test:
-- Review the output contract and confirm it is enough for a user to understand what happened after a build.
+测试：
+- 审查输出契约，确认用户在构建完成后能够理解发生了什么。
 
-## Task 11: Plan The LaTeX Worker Boundary
+## 任务 11：规划 LaTeX Worker 边界
 
-**Target outcome:** The local LaTeX worker is isolated and only handles execution concerns.
+**目标成果：** 本地 LaTeX worker 完全隔离，只处理执行相关事务。
 
-- [ ] **Step 1: Define worker inputs**
-Document the exact worker input package: project revision snapshot, selected template package, linked build assets, build identifier, and local output destination.
+- [ ] **步骤 1：定义 worker 输入**
+记录 worker 的精确输入包：项目版本快照、选定的模板包、已链接的构建资产、构建标识符和本地输出目标路径。
 
-Test:
-- Confirm the worker input contains everything needed for build execution and nothing that requires UI knowledge.
+测试：
+- 确认 worker 输入包含构建执行所需的一切，且不包含任何需要 UI 知识的内容。
 
-- [ ] **Step 2: Define worker outputs**
-Document the exact worker outputs: success/failure state, artifact locations, log summary, error location, readable error summary, repair suggestion, and elapsed time.
+- [ ] **步骤 2：定义 worker 输出**
+记录 worker 的精确输出：成功/失败状态、产物位置、日志摘要、错误位置、可读错误摘要、修复建议和耗时。
 
-Test:
-- Confirm the output package is enough for the application layer to update the project without parsing raw worker internals.
+测试：
+- 确认输出包足以让应用层更新项目，无需解析 worker 内部原始内容。
 
-- [ ] **Step 3: Define worker restrictions**
-Document what the worker must never do: user orchestration, project creation logic, UI state management, academic reasoning, and arbitrary project mutation.
+- [ ] **步骤 3：定义 worker 限制**
+记录 worker 绝对不能做的事情：用户编排、项目创建逻辑、UI 状态管理、学术推理和任意项目变更。
 
-Test:
-- Review the restriction list and confirm the worker remains a pure execution service.
+测试：
+- 审查限制列表，确认 worker 保持为纯粹的执行服务。
 
-## Task 12: Plan Error Reporting And Recovery
+## 任务 12：规划错误报告与恢复
 
-**Target outcome:** The base game remains debuggable and recoverable when things go wrong.
+**目标成果：** 基础游戏在出现问题时保持可调试性和可恢复性。
 
-- [ ] **Step 1: Define traceability fields**
-Document the minimum IDs to carry through the system: request id, decision id, project id, project revision, and build job id.
+- [ ] **步骤 1：定义可追溯字段**
+记录贯穿系统所需的最小 ID 集：request ID、decision ID、project ID、项目版本号和 build job ID。
 
-Test:
-- Walk one sample request from input to build preview.
-- Confirm every major step can be traced using IDs alone.
+测试：
+- 追踪一个从输入到构建预览的示例请求。
+- 确认每个主要步骤都可以仅凭 ID 进行追溯。
 
-- [ ] **Step 2: Define user-visible error classes**
-Document the first-release error classes: research generation failure, project creation failure, upload failure, build failure, unsupported template, unsupported input, and validation failure.
+- [ ] **步骤 2：定义用户可见的错误类型**
+记录第一版的错误类型：研究生成失败、项目创建失败、上传失败、构建失败、不支持的模板、不支持的输入和验证失败。
 
-Test:
-- Confirm each error class maps to exactly one user-facing message pattern and one logging category.
+测试：
+- 确认每种错误类型恰好映射到一种用户可见的消息模式和一个日志类别。
 
-- [ ] **Step 3: Define retry rules**
-Document which actions are safe to retry and which require explicit user confirmation.
+- [ ] **步骤 3：定义重试规则**
+记录哪些操作可以安全重试，哪些需要用户明确确认。
 
-Test:
-- Review the retry table and confirm no destructive action is retried silently.
+测试：
+- 审查重试表，确认没有任何破坏性操作被静默重试。
 
-## Task 13: Plan End-To-End Acceptance Tests
+## 任务 13：规划端到端验收测试
 
-**Target outcome:** The team has a concrete checklist proving the base game works.
+**目标成果：** 团队拥有一份具体的检查清单，证明基础游戏可以正常运行。
 
-- [ ] **Step 1: Define the happy-path acceptance test**
-Write a manual or automated end-to-end scenario: launch the desktop app, enter keyword or supported seed paper input, receive research card, convert to paper project, select template, add one figure asset, build, preview success.
+- [ ] **步骤 1：定义正常路径验收测试**
+编写一个手动或自动化的端到端场景：启动桌面应用、输入关键词或支持的种子论文、接收研究卡片、转化为论文项目、选择模板、添加一个图片资产、构建、预览成功。
 
-Test:
-- Confirm the scenario covers the full base game loop and nothing beyond it.
+测试：
+- 确认该场景覆盖完整的基础游戏循环，且不超出范围。
 
-- [ ] **Step 2: Define the recovery-path acceptance test**
-Write one end-to-end scenario where the build fails first, the user sees a clear error location, readable summary, and repair suggestion, fixes the issue, and successfully rebuilds.
+- [ ] **步骤 2：定义恢复路径验收测试**
+编写一个端到端场景：构建首次失败，用户看到清晰的错误位置、可读摘要和修复建议，修复问题后成功重新构建。
 
-Test:
-- Confirm the recovery path validates both visibility and retry behavior.
+测试：
+- 确认恢复路径同时验证了可见性和重试行为。
 
-- [ ] **Step 3: Define the non-goal guardrail test**
-Write a checklist proving unsupported features are explicitly rejected, such as arbitrary LaTeX import, unsupported template upload, and unsupported free-form seed reference input.
+- [ ] **步骤 3：定义非目标护栏测试**
+编写一份检查清单，证明不支持的功能被明确拒绝，例如：任意 LaTeX 导入、不支持的模板上传、不支持的自由格式种子引用输入。
 
-Test:
-- Confirm the product fails gracefully and honestly instead of appearing partially supported.
+测试：
+- 确认产品以优雅且诚实的方式拒绝，而非看似部分支持。
 
-- [ ] **Step 4: Define the bug-to-regression workflow**
-Document how a discovered bug should become a stable local repro and then a regression check: capture trace id and logs, isolate root cause, add a focused test or explicit regression checklist, and verify the fix against that artifact.
+- [ ] **步骤 4：定义 bug 转回归工作流程**
+记录如何将发现的 bug 转化为稳定的本地可复现步骤，再转化为回归检查：捕获 trace ID 和日志、隔离根因、添加聚焦的测试或明确的回归检查清单、并验证修复对该产物有效。
 
-Test:
-- Confirm the workflow can be followed without inventing a new QA process each time.
-- Confirm the workflow matches the v1 goal of planning testing from the beginning.
+测试：
+- 确认该工作流程无需每次发明新的 QA 流程即可遵循。
+- 确认该工作流程与 v1 从一开始就规划测试的目标一致。
 
-## Task 14: Prepare Implementation Handoff
+## 任务 14：准备实施移交
 
-**Target outcome:** AI developers can start execution without reinterpreting the plan.
+**目标成果：** AI 开发者无需重新解读计划即可开始执行。
 
-- [ ] **Step 1: Order the implementation sequence**
-Arrange the final implementation order as: skeleton, domain model, routes, research flow, project conversion, template flow, structure flow, asset/reference flow, build flow, worker, error handling, acceptance tests.
+- [ ] **步骤 1：排列实施顺序**
+整理最终实施顺序为：骨架、领域模型、路由、研究流程、项目转化、模板流程、结构流程、资产/参考文献流程、构建流程、worker、错误处理、验收测试。
 
-Test:
-- Review the sequence and confirm each later step depends only on earlier completed work.
+测试：
+- 审查顺序，确认后续每个步骤仅依赖于之前已完成的工作。
 
-- [ ] **Step 2: Mark independent work streams**
-Identify which tasks can run in parallel without creating merge conflicts, such as route planning versus worker boundary planning.
+- [ ] **步骤 2：标记独立工作流**
+识别哪些任务可以并行执行而不产生合并冲突，例如路由规划与 worker 边界规划。
 
-Test:
-- Confirm each parallel stream has a separate ownership boundary.
+测试：
+- 确认每个并行流都有独立的所有权边界。
 
-- [ ] **Step 2.5: Freeze platform release boundary**
-Document the platform policy as `macOS first in development, Windows still required for v1 release, Linux deferred`.
+- [ ] **步骤 2.5：冻结平台发布边界**
+记录平台策略为：`macOS 优先开发，Windows 仍为 v1 发布要求，Linux 延后`。
 
-Test:
-- Confirm the development order and the formal release gate do not conflict.
-- Confirm the v1 release checklist explicitly requires both macOS and Windows to pass.
+测试：
+- 确认开发顺序与正式发布门槛不冲突。
+- 确认 v1 发布检查清单明确要求 macOS 和 Windows 均须通过。
 
-- [ ] **Step 3: Add shipping criteria**
-Document the minimum release gate: full happy path works, one failure path works, supported-template list is honest, logs and trace IDs are visible, desktop preview and export both work, there is no known blocker in the build-preview loop, and both macOS and Windows pass the formal release checklist.
+- [ ] **步骤 3：添加发布标准**
+记录最低发布门槛：完整正常路径可用、一条失败路径可用、支持的模板列表诚实、日志和 trace ID 可见、桌面预览和导出均可用、构建-预览循环中无已知阻塞项，且 macOS 和 Windows 均通过正式发布检查清单。
 
-Test:
-- Review the release gate and confirm it measures product readiness rather than implementation effort.
+测试：
+- 审查发布门槛，确认其衡量的是产品就绪程度，而非实施工作量。
 
-## Self-Review Checklist
+## 自检清单
 
-Before implementation begins, verify the plan against this checklist:
+在实施开始之前，对照本清单验证计划：
 
-- [ ] Every step is small enough for an AI developer to execute without inventing extra scope.
-- [ ] Every step includes a validation test.
-- [ ] The plan stays inside the base game boundary.
-- [ ] The plan treats the paper project as the core object.
-- [ ] The plan preserves high cohesion and low coupling between desktop UI, application layer, and LaTeX worker.
-- [ ] The plan does not imply a full LaTeX IDE or research super-app.
-- [ ] The plan reflects the frozen product decisions already agreed in discussion.
-- [ ] The plan treats tests, logs, and regression capture as first-class engineering work rather than end-stage polish.
+- [ ] 每个步骤都足够小，AI 开发者可以在不发明额外范围的情况下执行。
+- [ ] 每个步骤都包含验证测试。
+- [ ] 计划保持在基础游戏边界内。
+- [ ] 计划将论文项目视为核心对象。
+- [ ] 计划在桌面 UI、应用层和 LaTeX worker 之间保持高内聚低耦合。
+- [ ] 计划不暗示完整的 LaTeX IDE 或研究超级应用。
+- [ ] 计划反映了讨论中已达成一致的冻结产品决策。
+- [ ] 计划将测试、日志和回归捕获视为一等工程工作，而非后期美化阶段。

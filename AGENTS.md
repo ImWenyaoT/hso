@@ -1,41 +1,41 @@
-# Repository Guidelines
+# 仓库规范指南
 
-# IMPORTANT:
-# Always read memory_bank/@architecture.md before writing any code. Include entire database schema.
-# Always read memory_bank/@PRD.md before writing any code.
-# After adding a major feature or completing a milestone, update memory_bank/@architecture.md.
+# 重要提示：
+# 编写任何代码前，务必先阅读 memory_bank/@architecture.md，包括完整的数据库 schema。
+# 编写任何代码前，务必先阅读 memory_bank/@PRD.md。
+# 添加主要功能或完成里程碑后，更新 memory_bank/@architecture.md。
 
-## Project Structure & Module Organization
-This repository is currently a planning workspace for HSO, a low-barrier academic paper workbench. Core product and architecture context lives in `PRD.md`, `idea.md`, and `tech_stack.md`. Task tracking belongs in `tasks/todo.md`. As implementation starts, keep app code under `src/`, tests under `tests/`, static assets under `assets/`, and long-form design or decision notes under `docs/`.
+## 项目结构与模块组织
+本仓库目前是 HSO 的规划工作区，HSO 是一个低门槛学术论文工作台。核心产品与架构背景位于 `PRD.md`、`idea.md` 和 `tech_stack.md`。任务追踪位于 `tasks/todo.md`。实现启动后，应用代码置于 `src/` 下，测试置于 `tests/` 下，静态资产置于 `assets/` 下，长篇设计或决策说明置于 `docs/` 下。
 
-## Build, Test, and Development Commands
-There is no scaffolded runtime yet, so contributors should treat the current repo as docs-first. Use:
+## 构建、测试与开发命令
+当前尚无已搭建的运行时，贡献者应将当前仓库视为文档优先。可使用：
 
-- `ls` or `rg --files` to inspect repository contents quickly
-- `sed -n '1,160p' PRD.md` to review product scope before editing
-- `git status` and `git diff` once the repository is initialized
+- `ls` 或 `rg --files` 快速检查仓库内容
+- `sed -n '1,160p' PRD.md` 在编辑前审阅产品范围
+- `git status` 和 `git diff` 在仓库初始化后使用
 
-When the app is scaffolded, standardize on explicit commands such as `npm run dev`, `npm run build`, `npm run lint`, and `npm run test`, and document them in the project README.
+应用脚手架搭建完成后，统一使用明确的命令，如 `npm run dev`、`npm run build`、`npm run lint` 和 `npm run test`，并在项目 README 中加以说明。
 
-## Coding Style & Naming Conventions
-Keep edits minimal and directly tied to product scope. Use Markdown for planning docs and prefer short sections, numbered lists, and precise wording over long narrative paragraphs. For future code, use 2-space indentation in frontend files, descriptive file names like `paper-project-service.ts`, and add function-level comments for non-trivial functions. Prefer kebab-case for Markdown files and feature docs, for example `latex-build-flow.md`.
+## 代码风格与命名规范
+保持编辑最小化，与产品范围直接相关。规划文档使用 Markdown，偏好短节、编号列表和精确措辞，而非冗长的叙述段落。未来代码使用前端文件 2 空格缩进，文件名具有描述性，如 `paper-project-service.ts`，并为非平凡函数添加函数级注释。Markdown 文件和功能文档偏好使用 kebab-case，例如 `latex-build-flow.md`。
 
-## Modularity Rules
+## 模块化规则
 
-**High cohesion, low coupling — per `idea.md` DDD values.**
+**高内聚，低耦合 —— 遵循 `idea.md` 的 DDD 原则。**
 
-- Each file owns a single named concern: `paper-project.service.ts` does service logic; `paper-project.repository.ts` does data access; `paper-project.types.ts` holds types. A file mixing routing, business logic, *and* DB calls is a design smell — split it.
-- **File length is a signal, not a rule.** A 400-line file with a single tight concern is fine. A 150-line file that straddles two domains needs to be split. Ask "does this file have one job?" not "how many lines is it?"
-- Domain boundaries are hard walls: the **Information Retrieval** domain (`src/retrieval/`) and the **LaTeX Build** domain (`src/latex/`) must not import from each other. Cross-domain orchestration belongs exclusively in the Agent layer — this is the direct expression of `idea.md`'s "two independent domains, coordinated by the top-level orchestrator Agent."
-- Map every file to exactly one of the three architecture layers (Web App / Agent+Application / Execution). A file that spans layers must be refactored.
-- When scaffolding a new feature, write the file breakdown first (`service`, `repository`, `types`, `handler`) and confirm before implementing. This prevents the "start with one file and keep adding" pattern that creates monoliths.
-- Do not create a catch-all barrel `index.ts` that re-exports the entire domain.
+- 每个文件归属单一具名职责：`paper-project.service.ts` 负责服务逻辑；`paper-project.repository.ts` 负责数据访问；`paper-project.types.ts` 存放类型定义。混合路由、业务逻辑与数据库调用的文件是设计异味——应将其拆分。
+- **文件长度是信号，不是规则。** 一个拥有单一紧密职责的 400 行文件是可以的。一个横跨两个领域的 150 行文件需要拆分。问"这个文件只做一件事吗？"而非"它有多少行？"
+- 领域边界是硬墙：**信息检索**领域（`src/retrieval/`）与 **LaTeX 构建**领域（`src/latex/`）不得相互导入。跨领域编排专属于 Agent 层——这是 `idea.md` 中"两个独立领域，由顶层编排 Agent 协调"的直接体现。
+- 每个文件精确对应三层架构（Web App 层 / Agent+Application 层 / Execution 层）中的一层。横跨多层的文件必须重构。
+- 搭建新功能脚手架时，先写出文件分解方案（`service`、`repository`、`types`、`handler`），确认后再实现。这能防止"从一个文件开始不断堆积"形成巨石文件的模式。
+- 不要创建重新导出整个领域的兜底桶文件 `index.ts`。
 
-## Testing Guidelines
-No automated test framework is checked in yet. Until code exists, verify documentation changes by checking factual consistency across `PRD.md`, `idea.md`, and `tech_stack.md`. Once implementation begins, create tests in `tests/` with names like `paper-project.test.ts` or `test_latex_build.py`, and require contributors to run the relevant focused test command before submitting changes.
+## 测试规范
+当前尚无已纳入的自动化测试框架。在代码存在之前，通过检查 `PRD.md`、`idea.md` 和 `tech_stack.md` 之间的事实一致性来验证文档变更。实现启动后，在 `tests/` 中创建测试，命名如 `paper-project.test.ts` 或 `test_latex_build.py`，并要求贡献者在提交变更前运行相关的聚焦测试命令。
 
-## Commit & Pull Request Guidelines
-Local git history is not available in this workspace, so no repository-specific commit pattern can be inferred yet. Adopt Conventional Commits going forward, e.g. `docs: refine repository guidelines` or `feat(agent): add plan executor`. PRs should include a short summary, impacted files, verification performed, and screenshots only when UI behavior changes.
+## 提交与 Pull Request 规范
+本工作区无本地 git 历史可参考，因此暂无仓库专属的提交模式可推断。从现在起采用约定式提交（Conventional Commits），例如 `docs: refine repository guidelines` 或 `feat(agent): add plan executor`。PR 应包含简短摘要、影响文件、已执行的验证，以及仅在 UI 行为变更时附上截图。
 
-## Agent-Specific Notes
-Follow the repo-level workflow in `CLAUDE.md`: plan first, track work in `tasks/todo.md`, verify before marking done, and avoid speculative over-engineering.
+## Agent 专项说明
+遵循 `CLAUDE.md` 中的仓库级工作流：先规划，在 `tasks/todo.md` 中追踪工作，验证后再标记完成，避免投机性过度设计。

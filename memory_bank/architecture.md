@@ -1,116 +1,116 @@
-# HSO Architecture Notes
+# HSO 架构说明
 
-## Purpose
+## 目的
 
-This file explains what the current key documentation files do so future developers can find the right source of truth without re-deriving intent from scattered notes.
+本文件说明当前各关键文档的职责，以便未来的开发者无需从零推导分散笔记中的意图，即可找到正确的权威来源。
 
-The repository is still in a docs-first stage. These notes describe document ownership and architectural responsibility, not implementation code modules yet.
+当前仓库仍处于文档优先阶段。这些说明描述的是文档归属与架构职责，而非具体的实现代码模块。
 
-## Current Source-Of-Truth Files
+## 当前权威来源文件
 
 ### `memory_bank/PRD.md`
 
-Owns the product definition for HSO.
+拥有 HSO 的产品定义。
 
-It answers:
+它回答：
 
-1. What HSO is.
-2. Who the product is for.
-3. What the first-release product loop is trying to achieve.
-4. What the first-release scope and non-goals are at the product level.
+1. HSO 是什么。
+2. 产品面向哪些用户。
+3. 第一版产品闭环要实现什么目标。
+4. 第一版的产品范围和非目标是什么。
 
-Use this file when the question is about product intent, user value, domain emphasis, or v1 product boundaries.
+当问题涉及产品意图、用户价值、领域侧重或 v1 产品边界时，使用此文件。
 
 ### `memory_bank/tech_stack.md`
 
-Owns the default technical direction and selection criteria.
+拥有默认技术方向与选型标准。
 
-It answers:
+它回答：
 
-1. Which technologies are the current default recommendations.
-2. Why the stack is desktop-first.
-3. Why `TypeScript` is the main implementation language.
-4. Which supporting technologies are core, conditional, or deferred.
+1. 当前默认推荐哪些技术。
+2. 为何技术栈以桌面端为主。
+3. 为何 TypeScript 是主要实现语言。
+4. 哪些辅助技术是核心、条件性或延后引入的。
 
-Use this file when the question is about stack selection, runtime preferences, toolchain direction, or engineering baseline assumptions.
+当问题涉及技术选型、运行时偏好、工具链方向或工程基线假设时，使用此文件。
 
 ### `memory_bank/implementation_plan.md`
 
-Owns the execution order for building the HSO base game.
+拥有构建 HSO 基础游戏的执行顺序。
 
-It answers:
+它回答：
 
-1. Which tasks exist.
-2. What each task is supposed to deliver.
-3. How each task should be validated.
-4. Which product and engineering decisions are already frozen before implementation begins.
+1. 存在哪些任务。
+2. 每个任务应交付什么。
+3. 每个任务如何进行验收。
+4. 在实现开始之前，哪些产品与工程决策已被冻结。
 
-Use this file when the question is about sequencing, task boundaries, delivery checkpoints, or what must happen before later steps can start.
+当问题涉及任务排序、任务边界、交付检查点，或某后续步骤的前置条件时，使用此文件。
 
 ### `memory_bank/repository_skeleton.md`
 
-Owns the frozen Step 2 repository skeleton and runtime delivery boundaries for the base game.
+拥有基础游戏冻结的第二步仓库骨架与运行时交付边界。
 
-It answers:
+它回答：
 
-1. Which top-level repository areas exist before implementation starts.
-2. Which responsibilities belong to Electron main, renderer, and local worker.
-3. Which environment dependency categories are required for v1.
-4. How project-local storage differs from global app-data storage.
-5. Which quality infrastructure is mandatory from the beginning.
+1. 实现开始之前存在哪些顶层仓库目录。
+2. Electron 主进程、渲染进程和本地 Worker 各自的职责归属。
+3. v1 所需的环境依赖类别。
+4. 项目本地存储与全局应用数据存储的区别。
+5. 从一开始就必须具备哪些质量基础设施。
 
-Use this file when the question is about repository layout, runtime ownership, local-vs-global storage boundaries, or Step 2 delivery guardrails.
+当问题涉及仓库布局、运行时归属、本地与全局存储边界，或第二步交付护栏时，使用此文件。
 
 ### `memory_bank/base_game_contract.md`
 
-Owns the frozen Step 1 contract for the base game.
+拥有基础游戏冻结的第一步契约。
 
-It answers:
+它回答：
 
-1. What the exact six-step base game loop is.
-2. What the core object vocabulary means.
-3. Which non-goals are explicitly outside v1.
-4. Which boundaries later steps must treat as already fixed.
+1. 基础游戏六步闭环的确切内容。
+2. 核心对象词汇表的含义。
+3. 哪些非目标明确不在 v1 范围内。
+4. 后续步骤必须视为已固定的边界是什么。
 
-Use this file when the question is about the exact meaning of `research card`, `paper project`, `build result`, `reference source`, or the precise Step 1 base-game boundary.
+当问题涉及 `research card`、`paper_project`、`build_result`、`reference_source` 的确切含义，或第一步基础游戏边界的精确界定时，使用此文件。
 
-This file should be treated as the immediate source of truth for Step 1 terminology and scope guardrails.
+本文件应被视为第一步术语与范围护栏的即时权威来源。
 
 ### `memory_bank/progress.md`
 
-Owns milestone tracking for completed documentation or implementation work.
+拥有已完成文档或实现工作的里程碑追踪记录。
 
-It answers:
+它回答：
 
-1. What has been completed.
-2. What artifacts were produced.
-3. Which validations were used to accept the work.
-4. Where the next boundary or handoff starts.
+1. 哪些工作已完成。
+2. 产出了哪些制品。
+3. 使用了哪些验收标准。
+4. 下一个边界或交接点从哪里开始。
 
-Use this file when the question is about project history, completed milestones, or whether a task has already been accepted.
+当问题涉及项目历史、已完成里程碑，或某个任务是否已被验收时，使用此文件。
 
-## Supporting Files
+## 辅助文件
 
 ### `idea.md`
 
-Owns the higher-level architectural philosophy behind HSO, including `LUI`, `thin client`, `DDD`, `smart agent, dumb tool`, design tokens, and the long-term multi-agent direction.
+拥有 HSO 背后更高层次的架构理念，包括 `LUI`、`thin client`、`DDD`、`smart agent, dumb tool`、设计令牌，以及长期多 Agent 方向。
 
-This file is upstream guidance. It should shape the memory bank, but it is not the day-to-day execution contract by itself.
+本文件是上游指引，应影响 memory bank 的内容，但它本身不是日常执行契约。
 
 ### `tasks/todo.md`
 
-Owns the working session checklist and review trail for the current repository tasks.
+拥有当前仓库任务的工作会话检查清单与审阅记录。
 
-It is the operational tracking file for active work, while `memory_bank/progress.md` is the accepted milestone record.
+它是活跃工作的操作追踪文件，而 `memory_bank/progress.md` 是已验收里程碑的正式记录。
 
-## Practical Reading Order
+## 推荐阅读顺序
 
-Future developers should usually read in this order before making non-trivial changes:
+未来的开发者在进行非平凡改动之前，通常应按以下顺序阅读：
 
 1. `memory_bank/architecture.md`
 2. `memory_bank/PRD.md`
 3. `memory_bank/tech_stack.md`
 4. `memory_bank/implementation_plan.md`
-5. `memory_bank/base_game_contract.md` when Step 1 terminology or scope boundaries matter
-6. `memory_bank/repository_skeleton.md` when Step 2 repository and runtime boundaries matter
-7. `memory_bank/progress.md` to understand what has already been accepted
+5. `memory_bank/base_game_contract.md`——当第一步术语或范围边界有疑问时
+6. `memory_bank/repository_skeleton.md`——当第二步仓库与运行时边界有疑问时
+7. `memory_bank/progress.md`——了解哪些工作已被验收
