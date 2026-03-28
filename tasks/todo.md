@@ -61,8 +61,17 @@
 - [x] 新建集中式合同文档 `memory_bank/base_game_contract.md`
 - [x] 冻结 base game 六步用户流程与核心对象词汇
 - [x] 冻结 v1 non-goals，并与 `memory_bank/PRD.md` 第 8 节对齐
-- [ ] 等待用户执行 Step 1 测试并确认结果
-- [ ] 待测试通过后再补写 `memory_bank/progress.md` 与 `memory_bank/architecture.md`
+- [x] 等待用户执行 Step 1 测试并确认结果
+- [x] 待测试通过后补写 `memory_bank/progress.md` 与 `memory_bank/architecture.md`
+
+## Current Task: Step 2 Repository Skeleton And Delivery Boundaries
+
+- [x] 通读 `memory_bank/` 全部文件并以 `progress.md` 确认当前边界停在 Step 2
+- [x] 提炼 Task 2 需要冻结的五类内容：仓库骨架、runtime 归属、环境边界、存储边界、质量边界
+- [x] 新建 `memory_bank/repository_skeleton.md` 作为 Step 2 单一事实来源
+- [x] 在 `memory_bank/architecture.md` 登记新的 Step 2 文档职责与阅读顺序
+- [x] 等待用户执行 Step 2 测试并确认结果
+- [x] 在用户确认前不进入 Step 3 的领域建模
 
 ## Checklist
 
@@ -106,4 +115,8 @@
 - 已将语言基线正式写死：`TypeScript` 为主工程语言，`Python` 仅作脚本、分析与辅助工具用途，避免继续停留在默认推断层。
 - 已新增 `memory_bank/base_game_contract.md` 作为 Step 1 的唯一事实来源，集中冻结六步 base game 流程、核心对象词汇和 v1 non-goals。
 - 已明确 `research card` 是前置研究材料、`paper project` 是主工作对象、`build result` 是单次 build job 的结果、`reference source` 不是通用 asset。
-- 已将本轮任务状态写入 `tasks/todo.md`，并明确在你确认测试通过前，不更新 `memory_bank/progress.md`、不更新 `memory_bank/architecture.md`、不进入 Step 2。
+- 已将每轮任务状态持续写入 `tasks/todo.md`，并保持“未验收前不越过当前步骤边界”的执行纪律。
+- 已完成 Step 1 验收后的状态收口：`tasks/todo.md`、`memory_bank/progress.md`、`memory_bank/architecture.md` 三者现已一致。
+- 已新增 `memory_bank/repository_skeleton.md` 作为 Step 2 的唯一事实来源，单独冻结最小仓库结构、Electron main / renderer / local worker 的运行时归属、环境依赖类别、`.hso` 与 app data 的存储边界、以及 v1 必需的质量基础设施。
+- 已明确 Step 2 只定义边界与职责，不提前写入 Step 3 的实体、字段、关系或数据库 schema，避免任务越界。
+- 已完成 Step 2 验收：对照 Section 7 七条核查项全部通过，跨文档一致性无冲突，`memory_bank/progress.md` 已收口记录。

@@ -47,6 +47,20 @@ It answers:
 
 Use this file when the question is about sequencing, task boundaries, delivery checkpoints, or what must happen before later steps can start.
 
+### `memory_bank/repository_skeleton.md`
+
+Owns the frozen Step 2 repository skeleton and runtime delivery boundaries for the base game.
+
+It answers:
+
+1. Which top-level repository areas exist before implementation starts.
+2. Which responsibilities belong to Electron main, renderer, and local worker.
+3. Which environment dependency categories are required for v1.
+4. How project-local storage differs from global app-data storage.
+5. Which quality infrastructure is mandatory from the beginning.
+
+Use this file when the question is about repository layout, runtime ownership, local-vs-global storage boundaries, or Step 2 delivery guardrails.
+
 ### `memory_bank/base_game_contract.md`
 
 Owns the frozen Step 1 contract for the base game.
@@ -98,4 +112,5 @@ Future developers should usually read in this order before making non-trivial ch
 3. `memory_bank/tech_stack.md`
 4. `memory_bank/implementation_plan.md`
 5. `memory_bank/base_game_contract.md` when Step 1 terminology or scope boundaries matter
-6. `memory_bank/progress.md` to understand what has already been accepted
+6. `memory_bank/repository_skeleton.md` when Step 2 repository and runtime boundaries matter
+7. `memory_bank/progress.md` to understand what has already been accepted
