@@ -16,10 +16,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Write detailed specs upfront to reduce ambiguity
 
 ### 2. Subagent Strategy
-- Use subagents liberally to keep main contect window clean
+- Use subagents liberally to keep main context window clean
 - Offload research, exploration, and parallel analysis to subagents
-- For complex problens, throw more compute at it via subagents
-- One tack per subagent for focused execution
+- For complex problems, throw more compute at it via subagents
+- One task per subagent for focused execution
 
 ### 3. Self-Improvement Loop
 - After ANY correction from the user: update `tasks/lessons.md` with the pattern
@@ -36,7 +36,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 5. Demand Elegance (Balanced)
 - For non-trivial changes: pause and ask "is there a more elegant way?"
 - If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
-- Skip this for simple, chvious fixes - don't over-engineer
+- Skip this for simple, obvious fixes - don't over-engineer
 - Challenge your own work before presenting it
 
 ### 6. Autonomous Bug Fixing
@@ -56,76 +56,68 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Core Principles
 
-- **Simplicity First**: Make every change as simple as possible. Inpact minimal code.
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
 - **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Code Over Docs**: When a spec is clear enough, write code — not more documentation.
 
 ---
 
 ## Project: HSO — 低门槛论文工作台
 
-HSO 是一个面向科研新手（研究生/初级研究者）的**论文工作台**，核心价值是让不熟悉 LaTeX 的用户能够结构化地管理论文项目、完成 LaTeX 编译与预览。信息检索域是前置辅助能力，LaTeX 构建域是第一版主价值域。
+HSO 是一个面向科研新手（研究生/初级研究者）的**桌面论文工作台**，核心价值是让不熟悉 LaTeX 的用户能够结构化地管理论文项目、完成 LaTeX 编译与预览。信息检索域是前置辅助能力，LaTeX 构建域是第一版主价值域。
 
-**当前阶段**：规划/规格阶段，尚无实现代码。关键文档：
-- [PRD.md](PRD.md) — 产品需求与范围
-- [idea.md](idea.md) — 系统架构理念（LUI、Agent 中枢、thin client、DDD）
-- [tech_stack.md](tech_stack.md) — 技术选型与部署方案
-- [tasks/todo.md](tasks/todo.md) — 当前任务进度
+**当前阶段**：编码实施阶段。脚手架与核心骨架已完成，下一步是 LaTeX Worker。
+
+关键文档：
+- [memory_bank/architecture.md](memory_bank/architecture.md) — 系统架构、领域模型、UI 规划、研究流程、转化流程
+- [memory_bank/progress.md](memory_bank/progress.md) — 基础产品契约与里程碑记录
+- [memory_bank/implementation_plan.md](memory_bank/implementation_plan.md) — 编码任务与进度
 
 ## 开发命令
 
-> 项目尚未初始化。一旦 scaffold 完成，预期命令如下：
-
 ```bash
-# Web App (Next.js)
-npm install
-npm run dev       # 启动开发服务器
-npm run build     # 生产构建
-npm run lint      # 代码检查
-npm run test      # 运行测试
-
-# LaTeX Worker（独立容器服务）
-# 见 worker/ 目录的 README
+npm install          # 安装依赖
+npm run dev          # Electron + React HMR 开发模式
+npm run build        # 生产构建
+npm run lint         # ESLint 检查
+npm run test         # Vitest 单元测试
+npm run db:studio    # Drizzle Studio 可视化数据库
 ```
 
 ## 系统架构
 
-系统分为三层，遵循 **thin client + smart agent, dumb tool** 原则：
+Electron 桌面应用，本地单用户，无云依赖：
 
 ```
-Web App 层 (Next.js)
-  └─ LUI 入口 + 论文项目页 + 构建状态展示
+渲染进程 (src/renderer/)
+  └─ React 18 + Tailwind CSS — 3 个页面 + 4 个项目区域
+       ↓ window.api.invoke(channel, payload)
+主进程 (src/main/)
+  └─ IPC handlers + DB 初始化 + Worker 管理
        ↓
-Agent / Application 层 (Node.js + Vercel AI SDK)
-  └─ 中枢协调器：理解输入 → 生成计划 → 调用工具 → 汇总结果
+应用编排层 (src/application/)
+  ├─ research-agent.ts  — Vercel AI SDK generateObject → research_card
+  └─ project-converter.ts — research_card → paper_project（DB 事务）
        ↓
-Execution 层（dumb tools）
-  ├─ Postgres (Drizzle ORM) — 核心数据：论文项目、研究卡片、构建记录
-  ├─ Cloudflare R2 (S3-compatible) — 文件：上传资料、模板、构建产物
-  ├─ Upstash Redis — 异步任务队列（触发 LaTeX 构建、检索任务）
-  └─ LaTeX Worker (独立容器, TeX Live) — 编译执行、日志采集、结果上报
+本地存储 (better-sqlite3 + Drizzle ORM)
+  └─ ~/.../hso.db — 9 个实体表
+       ↓
+LaTeX Worker (src/worker/)
+  └─ 独立 Node 进程 — latexmk + xelatex + BibTeX
 ```
 
-**两个独立领域**：
-- **信息检索域**：关键词/种子论文 → 研究卡片 → 候选资料（客观材料，不做学术判断）
-- **LaTeX 构建域**：论文项目 + 模板 + 章节 + 素材 → PDF 编译 + 预览（第一版核心价值）
-
-**核心对象**：`Paper Project`（目标模板、章节结构、图表素材、参考资料、构建状态）
+**共享契约** (`src/shared/`):
+- `schema.ts` — Drizzle 表定义（9 个实体）
+- `types.ts` — TypeScript 接口
+- `enums.ts` — BuildStatus, AssetVisibility, ResearchInputType, ErrorStage
+- `ipc-channels.ts` — IPC channel 常量
 
 ## 关键设计决策
 
-- **Agent 用 Plan + Execute，不用 ReAct loop**：先生成完整计划，用户确认一次，工具统一执行
-- **LaTeX Worker 必须独立**：编译依赖重、耗时长，不能放进 Vercel Serverless
-- **20% 可观测性投入**：所有关键步骤必须带 `requestId / traceId / decisionId`，用 Sentry + structured logging
-- **第一版不做多 Agent 网络**：单中枢 Agent 足够，过早拆分只增加复杂度
-- **向量检索是辅助，不是主存储**：核心数据放 Postgres，向量能力按需叠加
-
-## 部署组合
-
-| 组件 | 服务 |
-|------|------|
-| Web App | Vercel |
-| LaTeX Worker | Render 或 Fly.io |
-| 数据库 | 托管 Postgres |
-| 文件存储 | Cloudflare R2 |
-| 队列 | Upstash Redis |
-| 监控 | Sentry |
+- **IPC 桥接**：渲染进程通过 `window.api.invoke(channel, payload)` 调用主进程，preload 脚本暴露接口
+- **本地数据库**：`better-sqlite3` + Drizzle ORM，DB 文件在 `app.getPath('userData')/hso.db`
+- **研究 Agent**：`generateObject` + Zod schema，模型为 `claude-haiku-4-5-20251001`
+- **原子性项目创建**：project-converter 使用 Drizzle 事务，失败时全部回滚
+- **LaTeX Worker 隔离**：独立子进程，只处理构建执行，不接触 UI 状态或项目逻辑
+- **模板 Fixture**：3 个预定义模板（generic-article, ieee, elsevier）首次启动时幂等写入
+- **无路由库**：渲染层用 `{ page, params }` 状态对象管理路由，Electron 无 URL 栏

@@ -1,182 +1,373 @@
-# HSO 架构说明
+# HSO 系统架构参考
 
-## 目的
+本文档是 HSO 系统架构的综合参考，涵盖仓库结构、运行时归属、领域模型、UI 架构与核心流程契约。
 
-本文件说明当前各关键文档的职责，以便未来的开发者无需从零推导分散笔记中的意图，即可找到正确的权威来源。
+---
 
-当前仓库仍处于文档优先阶段。这些说明描述的是文档归属与架构职责，而非具体的实现代码模块。
+## 1. 仓库结构与运行时归属
 
-## 当前权威来源文件
+### 1.1 最小仓库结构
 
-### `memory_bank/PRD.md`
+| 目录 | 归属 |
+|------|------|
+| `src/main/` | Electron 主进程：生命周期、窗口、IPC 注册、worker 派生、本地路径解析 |
+| `src/renderer/` | React 渲染进程：用户输入、页面状态、视图展示、交互反馈 |
+| `src/application/` | 应用编排层：用例流程、Agent 调用、跨领域协调 |
+| `src/worker/` | 本地 LaTeX Worker：构建执行、工具链调用、产物收集 |
+| `src/shared/` | 共享契约：TypeScript schema、IPC channel、DTO、枚举、常量 |
+| `docs/` | 面向实现的工程笔记（非 memory_bank 权威来源） |
+| `tests/` | 自动化测试与回归用例 |
+| `memory_bank/` | 产品、架构、规划、范围的权威来源文档 |
+| `assets/` | 应用静态资产（图标、模板 fixture），不归属用户项目资产 |
 
-拥有 HSO 的产品定义。
+TypeScript 是 `src/` 下所有运行时拥有代码路径的默认实现语言。Python 仅用于辅助脚本与分析工具。
 
-它回答：
+### 1.2 运行时职责边界
 
-1. HSO 是什么。
-2. 产品面向哪些用户。
-3. 第一版产品闭环要实现什么目标。
-4. 第一版的产品范围和非目标是什么。
+**Electron 主进程**
+- 桌面应用生命周期、窗口创建、原生对话框
+- 应用数据目录解析、受控 IPC 入口注册
+- 本地 worker 进程派生与监管
+- 系统 PDF 查看器调起
 
-当问题涉及产品意图、用户价值、领域侧重或 v1 产品边界时，使用此文件。
+主进程**不**承担：繁重 LaTeX 构建、领域编排、UI 渲染。
 
-### `memory_bank/tech_stack.md`
+**渲染进程**
+- 页面渲染与交互状态
+- 研究输入、研究卡片审阅、项目转化、模板选择、章节编辑、构建触发、预览/导出
 
-拥有默认技术方向与选型标准。
+渲染进程**不**承担：构建执行、直接数据库操作、超出已批准 IPC 调用的文件系统特权。
 
-它回答：
+**本地 Worker**
+- 受控 LaTeX 构建执行（`latexmk + xelatex + BibTeX`）
+- 构建工作区准备、日志与产物收集
+- 结构化执行结果返回给应用层
 
-1. 当前默认推荐哪些技术。
-2. 为何技术栈以桌面端为主。
-3. 为何 TypeScript 是主要实现语言。
-4. 哪些辅助技术是核心、条件性或延后引入的。
+Worker **不**承担：窗口管理、长生命周期 UI 状态、产品层页面决策。
 
-当问题涉及技术选型、运行时偏好、工具链方向或工程基线假设时，使用此文件。
+**可选在线服务**（独立于本地运行时）
+- AI 提供方（结构化摘要、修复建议）
+- 可选远程错误聚合
+- 研究输入检索相关网络访问
 
-### `memory_bank/implementation_plan.md`
+### 1.3 环境依赖类别（v1）
 
-拥有构建 HSO 基础产品的执行顺序。
+| 类别 | 实现 |
+|------|------|
+| `local_database` | SQLite（better-sqlite3 + Drizzle ORM） |
+| `local_filesystem_storage` | 项目文件夹、`.hso/`、全局 asset store、构建产物 |
+| `ai_provider` | Anthropic Claude API（Vercel AI SDK） |
+| `local_worker_runtime` | Node 子进程，执行受控 LaTeX 工具链 |
+| `optional_error_tracking` | Sentry（可选，非 v1 硬性要求） |
 
-它回答：
+v1 不引入：协作后端、同步服务、认证平台、队列基础设施、远程构建服务。
 
-1. 存在哪些任务。
-2. 每个任务应交付什么。
-3. 每个任务如何进行验收。
-4. 在实现开始之前，哪些产品与工程决策已被冻结。
+### 1.4 本地存储布局
 
-当问题涉及任务排序、任务边界、交付检查点，或某后续步骤的前置条件时，使用此文件。
+**项目本地存储**（随项目文件夹一同移动）
+```
+<项目目录>/
+├── .hso/                # 项目本地元数据、修订状态、构建本地记录
+└── <项目内容文件>        # 规范化论文内容、项目专属素材
+```
 
-### `memory_bank/repository_skeleton.md`
+**全局应用数据存储**（机器本地，不随项目复制）
+- 全局 SQLite 数据库（`app.getPath('userData')/hso.db`）
+- 全局 asset store（可复用资产，不按项目重复存储）
+- 受控 LaTeX 工具链安装
+- 应用级缓存
+- 跨项目日志与诊断
 
-拥有基础产品冻结的第二步仓库骨架与运行时交付边界。
+### 1.5 质量基础设施（v1 必需）
 
-它回答：
+1. **结构化日志** — 每个主要操作输出机器可读日志
+2. **Trace ID** — 从 UI 触发到 worker 输出可端到端追踪
+3. **聚焦自动化测试** — 针对契约、编排边界和关键回归
+4. **手动回归检查清单** — 里程碑验收前运行
+5. **缺陷转测试工作流** — 发现故障模式时记录可复现回归用例
 
-1. 实现开始之前存在哪些顶层仓库目录。
-2. Electron 主进程、渲染进程和本地 Worker 各自的职责归属。
-3. v1 所需的环境依赖类别。
-4. 项目本地存储与全局应用数据存储的区别。
-5. 从一开始就必须具备哪些质量基础设施。
+---
 
-当问题涉及仓库布局、运行时归属、本地与全局存储边界，或第二步交付护栏时，使用此文件。
+## 2. 核心领域模型
 
-### `memory_bank/domain_model.md`
+### 2.1 最小实体集（9 个，v1 冻结）
 
-拥有基础产品冻结的第三步核心领域模型。
+`research_card` · `paper_project` · `paper_section` · `template` · `asset` · `reference_source` · `build_job` · `build_artifact` · `error_event`
 
-它回答：
+`user` 不是 v1 核心领域对象（本地单用户助手，不需要身份模型）。
 
-1. 基础产品最小需要哪些核心实体。
-2. 每个实体在 v1 中必须具备哪些字段。
-3. 各实体之间如何形成从研究输入到构建预览的闭环关系。
-4. `build_result` 在领域层如何由 `build_job` 与 `build_artifact` 承载。
-5. 素材可见性模型在不新增额外核心对象时如何解释。
+### 2.2 实体字段定义
 
-当问题涉及实体边界、字段必要性、对象关系，或第 3 步领域模型护栏时，使用此文件。
+**`research_card`** — 研究卡片，`paper_project` 的上游输入
 
-### `memory_bank/ui_page_plan.md`
+| 字段 | 作用 |
+|------|------|
+| `id` | 唯一标识 |
+| `input_type` | `keyword` / `doi` / `arxiv_id` / `title` / `url` |
+| `input_value` | 保留原始输入，支持重试追溯 |
+| `topic_label` | 面向用户的主题标签 |
+| `key_papers` | 结构化关键论文列表（JSON） |
+| `trend_summary` | 客观趋势摘要 |
+| `distribution_summary` | 客观分布摘要 |
+| `project_importable_sections` | 可直接转入项目的结构化章节（JSON） |
+| `reference_candidates` | 候选引用来源（JSON） |
+| `notes` | 不可导入项目的备注区 |
+| `created_at` | 生成时间 |
 
-拥有基础产品冻结的第四步用户界面页面规划。
+**`paper_project`** — 论文项目，基础产品核心对象
 
-它回答：
+| 字段 | 作用 |
+|------|------|
+| `id` | 唯一标识 |
+| `source_research_card_id` | 来源研究卡片，保证可追溯性 |
+| `title` | 项目标题（来自候选或占位） |
+| `template_id` | 当前模板；模板未选时允许为空 |
+| `current_version` | 项目版本号，构建必须绑定版本快照 |
+| `created_at` / `updated_at` | 时间戳 |
 
-1. 基础产品最小需要哪些顶层页面与项目页内区域。
-2. 每个页面或区域的单一职责与明确禁止项。
-3. 每个 UI 单元需要覆盖哪四种状态（空态、加载态、成功态、错误态）。
-4. 哪些内容超出第 4 步范围、属于第 5 步或之后的工作。
+**`paper_section`** — 有序规范化章节
 
-当问题涉及页面边界、区域职责、UI 状态覆盖，或第 4 步页面规划护栏时，使用此文件。
-它还定义了一个关键架构收敛点：第一版 UI 应保持少量顶层页面，把模板、资产、构建和预览压回 `paper_project_detail_page` 的受控区域中，而不是扩张成多个彼此割裂的工作台页面。
+| 字段 | 作用 |
+|------|------|
+| `id` / `paper_project_id` | 标识与归属 |
+| `order_index` | 保证顺序稳定 |
+| `section_key` | 规范化类型：`title` / `abstract` / `introduction` / `method` / `conclusion` 等 |
+| `heading` | 展示标题（支持模板映射差异） |
+| `content` | 章节正文，构建时必须消费 |
+| `created_at` / `updated_at` | 时间戳 |
 
-### `memory_bank/base_game_contract.md`
+**`template`** — 受控模板包
 
-拥有基础产品冻结的第一步契约。
+| 字段 | 作用 |
+|------|------|
+| `id` / `slug` | 标识与稳定键（`generic-article` / `ieee` / `elsevier`） |
+| `display_name` | 面向用户名称 |
+| `template_version` | 模板包自身版本 |
+| `supported_section_keys` | 可直接映射的章节类型列表（JSON） |
+| `mapping_rules` | 规范化章节到渲染槽位的映射规则（JSON） |
 
-它回答：
+**`asset`** — 构建相关素材（v1 仅图像）
 
-1. 基础产品六步闭环的确切内容。
-2. 核心对象词汇表的含义。
-3. 哪些非目标明确不在 v1 范围内。
-4. 后续步骤必须视为已固定的边界是什么。
+| 字段 | 作用 |
+|------|------|
+| `id` / `owner_project_id` | 标识与来源项目 |
+| `name` / `asset_kind` | 名称与类型（v1 固定 `image`） |
+| `storage_path` | 受控存储路径 |
+| `visibility_mode` | `project_only` / `selected_projects` / `all_projects` |
+| `selected_project_ids` | `selected_projects` 模式下允许访问的项目集（JSON） |
+| `created_at` | 登记时间 |
 
-当问题涉及 `research card`、`paper_project`、`build_result`、`reference_source` 的确切含义，或第一步基础产品边界的精确界定时，使用此文件。
+**`reference_source`** — 结构化引用来源（非通用 asset）
 
-本文件应被视为第一步术语与范围护栏的即时权威来源。
+| 字段 | 作用 |
+|------|------|
+| `id` / `paper_project_id` | 标识与归属 |
+| `source_type` | `doi` / `arxiv_id` / `title_match` / `url_resolved` |
+| `source_value` | 来源主键值 |
+| `title` / `authors` / `publication_year` | 最小引用元数据 |
+| `created_at` | 引用进入项目时间 |
 
-### `memory_bank/progress.md`
+**`build_job`** — 构建任务（绑定项目版本快照）
 
-拥有已完成文档或实现工作的里程碑追踪记录。
+| 字段 | 作用 |
+|------|------|
+| `id` / `paper_project_id` | 标识与归属 |
+| `project_version` | 构建时消费的版本快照 |
+| `status` | `queued` / `running` / `succeeded` / `failed`（v1 不含 `canceled`） |
+| `requested_at` / `started_at` / `finished_at` | 时间戳 |
+| `status_summary` | 面向用户的构建结果摘要 |
 
-它回答：
+**`build_artifact`** — 构建产物
 
-1. 哪些工作已完成。
-2. 产出了哪些制品。
-3. 使用了哪些验收标准。
-4. 下一个边界或交接点从哪里开始。
+| 字段 | 作用 |
+|------|------|
+| `id` / `build_job_id` | 标识与来源构建 |
+| `artifact_kind` | `pdf` / `build_log` / `aux_output` |
+| `storage_path` | 产物受控路径（支持预览、打开、导出） |
+| `created_at` | 产物生成时间 |
 
-当问题涉及项目历史、已完成里程碑，或某个任务是否已被验收时，使用此文件。
+**`error_event`** — 可见失败事件（跨阶段）
 
-## `memory_bank` 文件职责速查
+| 字段 | 作用 |
+|------|------|
+| `id` | 唯一标识 |
+| `paper_project_id` / `build_job_id` | 可选归属（允许脱离二者独立存在） |
+| `stage` | `research_generation` / `project_conversion` / `template_mapping` / `build_execution` / `preview_open` |
+| `error_code` | 机器可识别错误代码 |
+| `human_summary` | 面向用户的可读摘要 |
+| `location_hint` | 错误位置提示（可选） |
+| `suggested_fix` | 修复建议（可选） |
+| `created_at` | 记录时间 |
 
-当前 `memory_bank/` 中各文件职责如下：
+### 2.3 实体关系
 
-1. `PRD.md`
-   拥有产品目标、用户、范围、非目标与系统原则。
-2. `tech_stack.md`
-   拥有默认技术方向、主辅语言边界与工程基线假设。
-3. `implementation_plan.md`
-   拥有基础产品实施顺序、步骤拆解与每步验证要求。
-4. `base_game_contract.md`
-   拥有基础产品六步用户闭环、核心对象词汇和第一版非目标。
-5. `repository_skeleton.md`
-   拥有仓库骨架、运行时归属、环境边界、存储边界与质量基础设施。
-6. `domain_model.md`
-   拥有第 3 步核心领域模型，包括最小实体集、必需字段与实体关系。
-7. `ui_page_plan.md`
-   拥有第 4 步 UI 页面规划，包括最小页面与区域列表、单一职责、禁止项与四态定义。
-8. `progress.md`
-   拥有已完成步骤、交付内容、验收依据与当前边界。
+```
+research_card ──(1:N)──> paper_project
+                              │
+              ┌───────────────┼───────────────┐
+              │               │               │
+         template(N:1)  paper_section    reference_source
+                              │
+              ┌───────────────┘
+              │
+           asset          build_job ──(1:N)──> build_artifact
+                              │
+                          error_event (也可关联 paper_project)
+```
 
-## 辅助文件
+关键约束：
+- 转化时仅导入 `project_importable_sections`、选定标题候选、选定 `reference_candidates`，不导入 `notes`
+- 模板切换不改变规范化章节与引用，只改变映射与渲染规则
+- 构建历史按时间保留，不只保留最后一次
+- 用户感知的 `build_result` 由 `build_job + build_artifact` 共同承载
 
-### `idea.md`
+---
 
-拥有 HSO 背后更高层次的架构理念，包括 `LUI`、`thin client`、`DDD`、`smart agent, dumb tool`、设计令牌，以及长期多 Agent 方向。
+## 3. UI 架构
 
-本文件是上游指引，应影响 memory bank 的内容，但它本身不是日常执行契约。
+### 3.1 最小页面与区域
 
-### `tasks/todo.md`
+**3 个顶层页面**
 
-拥有当前仓库任务的工作会话检查清单与审阅记录。
+| 页面 | 职责 |
+|------|------|
+| `research_input_page` | 研究起点入口，接收输入，进入研究卡片流程 |
+| `research_card_results_page` | 展示研究卡片，提供重试/返回/转化入口 |
+| `paper_project_detail_page` | 论文项目主工作页，汇总所有后续操作 |
 
-它是活跃工作的操作追踪文件，而 `memory_bank/progress.md` 是已验收里程碑的正式记录。
+**`paper_project_detail_page` 内 4 个受控区域**（不是独立顶层路由）
 
-## 推荐阅读顺序
+| 区域 | 职责 |
+|------|------|
+| `template_selection_panel` | 查看/切换模板，展示映射反馈 |
+| `asset_panel` | 查看/添加/移除构建素材 |
+| `build_status_panel` | 触发构建，查看状态、摘要、错误与修复建议 |
+| `pdf_preview_export_panel` | 展示最近成功 PDF，提供打开/导出操作 |
 
-未来的开发者在进行非平凡改动之前，通常应按以下顺序阅读：
+v1 不拆出：独立模板中心、独立资产库、独立构建历史、独立 PDF 预览页。
 
-1. `memory_bank/architecture.md`
-2. `memory_bank/PRD.md`
-3. `memory_bank/tech_stack.md`
-4. `memory_bank/implementation_plan.md`
-5. `memory_bank/base_game_contract.md`——当第一步术语或范围边界有疑问时
-6. `memory_bank/repository_skeleton.md`——当第二步仓库与运行时边界有疑问时
-7. `memory_bank/domain_model.md`——当第三步实体、字段或关系边界有疑问时
-8. `memory_bank/ui_page_plan.md`——当第四步页面边界、项目页区域划分或状态覆盖有疑问时
-9. `memory_bank/progress.md`——了解哪些工作已被验收
+### 3.2 用户旅程
 
-## 当前文件间关系
+```
+research_input_page
+  → (提交) → research_card_results_page
+                → (转化) → paper_project_detail_page
+                                ├── template_selection_panel
+                                ├── asset_panel
+                                ├── build_status_panel
+                                └── pdf_preview_export_panel
+```
 
-为避免未来开发者把文档当成重复笔记，当前 `memory_bank` 的关系应按下面理解：
+### 3.3 各 UI 单元四态要求
 
-1. `PRD.md` 定义“为什么做”和“第一版做什么”。
-2. `tech_stack.md` 定义“默认用什么技术实现这些目标”。
-3. `implementation_plan.md` 定义“按什么顺序冻结和实现这些内容”。
-4. `base_game_contract.md` 定义“六步闭环和核心术语是什么”。
-5. `repository_skeleton.md` 定义“代码和运行时应该放在哪一层”。
-6. `domain_model.md` 定义“系统里最小需要哪些对象以及它们如何关联”。
-7. `ui_page_plan.md` 定义“用户实际会看到哪些页面/区域，以及每个 UI 单元负责什么”。
-8. `progress.md` 定义“哪些步骤已经被用户验收，下一步从哪里接着做”。
+| 单元 | 空态 | 加载态 | 成功态 | 错误态 |
+|------|------|--------|--------|--------|
+| `research_input_page` | 输入表单 | 禁用重复提交 | 跳转结果页 | 显示错误，保留输入，重试 |
+| `research_card_results_page` | 提示返回重新发起 | 骨架加载反馈 | 展示卡片，允许转化 | 错误摘要与返回/重试 |
+| `paper_project_detail_page` | 可操作初始工作区 | 局部或整页加载 | 所有区域可见可操作 | 错误 + trace 线索 + 返回入口 |
+| `template_selection_panel` | "未选择模板" + 下一步 | 禁用重复切换 | 展示模板与映射结果 | 加载失败或映射不兼容提示 |
+| `asset_panel` | 添加入口与格式说明 | 局部加载 | 展示素材列表及操作 | 失败原因 + 重试 |
+| `build_status_panel` | "尚无构建" + 首次构建入口 | `queued`/`running` 可见状态 | `succeeded` 摘要，联动预览 | `failed` 摘要、位置提示、修复建议 |
+| `pdf_preview_export_panel` | "暂无可预览文件" | 可见等待反馈 | PDF 展示 + 打开/导出 | 错误摘要 + 恢复路径 |
 
-未来若新增 Step 5 及之后的文档，应继续遵守这个模式：每个文件只拥有一个冻结层次，不回头吞并前一步的职责，也不提前抢定义后一步的细节。
+---
+
+## 4. 研究输入流程
+
+### 4.1 支持的输入类型（v1 冻结 5 种）
+
+| 类型 | 说明 |
+|------|------|
+| `keyword` | 主题关键词/短语，走主题级检索 |
+| `doi` | 规范 DOI，直接定位单篇论文 |
+| `arxiv_id` | 规范化 arXiv 标识符，直接定位单篇论文 |
+| `title` | 论文标题，走候选检索与用户确认 |
+| `url` | 论文相关 URL，仅作辅助解析（不是主检索路径） |
+
+v1 明确拒绝：自由格式引用文本、多论文混杂列表、PDF 直传作为主入口、未分隔长段落猜测输入。
+
+### 4.2 检索优先级（冻结）
+
+```
+DOI 查询 → arXiv ID 查询 → 标题搜索 → URL 解析辅助 → 用户确认候选
+```
+
+关键规则：
+- URL 只做辅助解析，提取出的 DOI/arXiv ID 重新进入确定性顺序
+- 标题搜索不假设唯一精确匹配，多候选时必须展示给用户确认
+- 用户确认候选前，不得将模糊结果固化为 `reference_source`
+- `keyword` 走主题级检索，不要求先确认种子论文
+
+### 4.3 研究卡片导入边界
+
+| 内容 | 可导入项目 |
+|------|-----------|
+| `project_importable_sections` | 是（用户选择后） |
+| `reference_candidates` | 是（用户确认后） |
+| 标题候选辅助信息 | 是（用户选中后作为 `title`） |
+| `trend_summary` / `distribution_summary` | 否 |
+| `notes` | 否 |
+| `key_papers`（未确认部分） | 否 |
+| 检索轨迹、Agent 推理 | 否 |
+
+### 4.4 研究生成失败行为
+
+必须提供：可见错误、保留原始输入、重试入口、返回修改入口、不伪造成功卡片、保留 trace ID 与错误代码。
+
+---
+
+## 5. 项目转化流程
+
+### 5.1 转化边界
+
+**允许导入（3 类）：**
+1. 用户选中的 `project_importable_sections` → 初始 `paper_section`
+2. 用户选中的标题候选 → `paper_project.title`
+3. 用户选中的 `reference_candidates` → 初始 `reference_source`
+
+**禁止导入：** `notes`、`trend_summary`、`distribution_summary`、未确认的 `key_papers`、检索轨迹、URL 解析中间结果、Agent 推理过程。
+
+### 5.2 新建项目初始状态
+
+| 字段/关联 | 初始值 |
+|-----------|--------|
+| `source_research_card_id` | 必填 |
+| `title` | 选定候选 > `topic_label` 占位 > 默认占位 |
+| `template_id` | 空（第 7 步选择） |
+| `current_version` | 1 |
+| `paper_section` | 有序章节（来自选中的 importable_sections） |
+| `reference_source` | 仅用户本次选择的引用 |
+| `asset` / `build_job` | 空 |
+
+### 5.3 项目创建失败处理
+
+**原子性**：完整创建或完全不暴露，不允许半成品状态。
+
+**用户体验**：可见错误、保留源卡片与已确认选择、重试入口、返回修改入口、不伪造成功项目。
+
+**日志**：结构化日志 + trace ID + 阶段标记 `project_conversion` + `error_event`。
+
+---
+
+## 6. 文档职责索引
+
+| 文件 | 拥有什么 |
+|------|----------|
+| `PRD.md` | 产品目标、用户、范围、非目标、系统原则 |
+| `tech_stack.md` | 技术选型、主辅语言边界、工程基线假设 |
+| `implementation_plan.md` | 实施顺序、步骤拆解、验证要求、决策冻结列表 |
+| `architecture.md`（本文件） | 仓库结构、运行时归属、领域模型、UI 架构、核心流程契约 |
+| `progress.md` | 基础产品六步契约（流程、词汇、非目标）+ 已完成里程碑记录 |
+
+辅助文件：
+- `idea.md` — 高层架构理念（LUI、thin client、DDD、多 Agent 长期方向）
+- `tasks/todo.md` — 活跃工作会话检查清单
+- `tasks/lessons.md` — 纠正模式与防错规则
+
+## 7. 推荐阅读顺序
+
+1. `architecture.md`（本文件）
+2. `PRD.md`
+3. `tech_stack.md`
+4. `implementation_plan.md`
+5. `progress.md`
