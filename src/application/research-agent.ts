@@ -67,7 +67,7 @@ function buildPrompt(inputType: ResearchInputType, inputValue: string): string {
 export async function generateResearchCard(
   inputType: ResearchInputType,
   inputValue: string
-) {
+): Promise<z.infer<typeof ResearchCardSchema>> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY 未配置。请在应用设置中添加 API Key。')

@@ -11,7 +11,7 @@ let _db: ReturnType<typeof drizzle> | null = null
  * 获取已初始化的 Drizzle DB 实例（单例）
  * 只在主进程中调用
  */
-export function getDb() {
+export function getDb(): ReturnType<typeof drizzle> {
   if (!_db) throw new Error('DB not initialized. Call initDb() first.')
   return _db
 }
@@ -22,7 +22,7 @@ export function getDb() {
  * 2. 建表（WAL 模式 + PRAGMA 优化）
  * 3. 插入初始模板 fixture（若为空）
  */
-export function initDb() {
+export function initDb(): void {
   const dbPath = join(app.getPath('userData'), 'hso.db')
   const sqlite = new Database(dbPath)
 
@@ -46,7 +46,7 @@ export function initDb() {
  * 用 raw SQL 创建所有表（IF NOT EXISTS）
  * 保持幂等，可重复执行
  */
-function createTables(sqlite: Database.Database) {
+function createTables(sqlite: Database.Database): void {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS research_card (
       id TEXT PRIMARY KEY,

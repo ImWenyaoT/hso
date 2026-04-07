@@ -12,7 +12,7 @@ interface Props {
  * 研究卡片结果页面
  * 展示结构化研究卡片，允许用户选择章节和引用，转化为论文项目
  */
-export default function ResearchCardPage({ cardId, navigate }: Props) {
+export default function ResearchCardPage({ cardId, navigate }: Props): JSX.Element {
   const [card, setCard] = useState<ResearchCard | null>(null)
   const [loading, setLoading] = useState(true)
   const [converting, setConverting] = useState(false)
@@ -34,7 +34,7 @@ export default function ResearchCardPage({ cardId, navigate }: Props) {
     })
   }, [cardId])
 
-  const toggleSection = (key: string) => {
+  const toggleSection = (key: string): void => {
     setSelectedSections(prev => {
       const next = new Set(prev)
       next.has(key) ? next.delete(key) : next.add(key)
@@ -42,7 +42,7 @@ export default function ResearchCardPage({ cardId, navigate }: Props) {
     })
   }
 
-  const toggleRef = (idx: number) => {
+  const toggleRef = (idx: number): void => {
     setSelectedRefs(prev => {
       const next = new Set(prev)
       next.has(idx) ? next.delete(idx) : next.add(idx)
@@ -50,7 +50,7 @@ export default function ResearchCardPage({ cardId, navigate }: Props) {
     })
   }
 
-  const handleConvert = async () => {
+  const handleConvert = async (): Promise<void> => {
     if (!card) return
     setConverting(true)
     setError(null)

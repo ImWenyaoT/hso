@@ -14,7 +14,9 @@ import type { CreateProjectFromCard } from '../shared/types'
  *
  * @throws 创建失败时抛出错误，调用方负责记录 error_event
  */
-export async function convertCardToProject(payload: CreateProjectFromCard) {
+export async function convertCardToProject(
+  payload: CreateProjectFromCard
+): Promise<{ projectId: string }> {
   const db = getDb()
 
   // 读取研究卡片

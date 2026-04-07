@@ -20,7 +20,7 @@ const INPUT_TYPE_OPTIONS: { value: ResearchInputType; label: string; placeholder
  * 研究输入页面
  * 用户选择输入类型并填写内容，提交后生成研究卡片
  */
-export default function ResearchInputPage({ navigate }: Props) {
+export default function ResearchInputPage({ navigate }: Props): JSX.Element {
   const [inputType, setInputType] = useState<ResearchInputType>(ResearchInputType.Keyword)
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,7 +28,7 @@ export default function ResearchInputPage({ navigate }: Props) {
 
   const selectedOption = INPUT_TYPE_OPTIONS.find(o => o.value === inputType)!
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
     if (!inputValue.trim()) return
 

@@ -15,7 +15,7 @@ type ActiveTab = 'structure' | 'template' | 'assets' | 'build'
  * 论文项目主工作页
  * 包含四个内部区域：结构、模板、素材、构建
  */
-export default function ProjectPage({ projectId, navigate }: Props) {
+export default function ProjectPage({ projectId, navigate }: Props): JSX.Element {
   const [project, setProject] = useState<PaperProject | null>(null)
   const [templates, setTemplates] = useState<Template[]>([])
   const [builds, setBuilds] = useState<BuildJob[]>([])
@@ -23,7 +23,7 @@ export default function ProjectPage({ projectId, navigate }: Props) {
   const [loading, setLoading] = useState(true)
   const [buildError, setBuildError] = useState<string | null>(null)
 
-  const loadProject = async () => {
+  const loadProject = async (): Promise<void> => {
     const [proj, tmpls, blds] = await Promise.all([
       api.getProject(projectId),
       api.listTemplates(),
@@ -37,12 +37,12 @@ export default function ProjectPage({ projectId, navigate }: Props) {
 
   useEffect(() => { loadProject() }, [projectId])
 
-  const handleSelectTemplate = async (templateId: string) => {
+  const handleSelectTemplate = async (templateId: string): Promise<void> => {
     await api.setTemplate(projectId, templateId)
     loadProject()
   }
 
-  const handleTriggerBuild = async () => {
+  const handleTriggerBuild = async (): Promise<void> => {
     setBuildError(null)
     try {
       await api.triggerBuild({ projectId })
@@ -60,8 +60,7 @@ export default function ProjectPage({ projectId, navigate }: Props) {
     return <div className="min-h-screen flex items-center justify-center text-red-500 text-sm">项目不存在</div>
   }
 
-  const selectedTemplate = templates.find(t => t.id === project.template_id)
-  const latestBuild = builds[0]
+  const selectedTemplate = templates.find((t): boolean => t.id === project.template_id)
 
   const tabs: { key: ActiveTab; label: string }[] = [
     { key: 'structure', label: '章节结构' },
@@ -146,7 +145,7 @@ interface StructureSectionProps {
 }
 
 /** 章节结构区域 */
-function StructureSection({ project }: StructureSectionProps) {
+function StructureSection({ project }: StructureSectionProps): JSX.Element {
   const sections = project.sections ?? []
 
   if (sections.length === 0) {
@@ -181,7 +180,7 @@ interface TemplateSectionProps {
 }
 
 /** 模板选择区域 */
-function TemplateSection({ templates, selectedTemplateId, onSelect }: TemplateSectionProps) {
+function TemplateSection({ templates, selectedTemplateId, onSelect }: TemplateSectionProps): JSX.Element {
   return (
     <div className="space-y-3">
       <p className="text-sm text-gray-500">选择论文模板，决定 LaTeX 构建样式</p>
@@ -216,7 +215,7 @@ interface BuildSectionProps {
 }
 
 /** 构建状态区域 */
-function BuildSection({ builds, selectedTemplate, onTrigger, error }: BuildSectionProps) {
+function BuildSection({ builds, selectedTemplate, onTrigger, error }: BuildSectionProps): JSX.Element {
   const latestBuild = builds[0]
 
   const statusLabel: Record<string, string> = {

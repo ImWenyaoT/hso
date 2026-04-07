@@ -12,10 +12,10 @@ export type Route =
   | { page: 'research-card'; cardId: string }
   | { page: 'project'; projectId: string }
 
-export default function App() {
+export default function App(): JSX.Element {
   const [route, setRoute] = useState<Route>({ page: 'research-input' })
 
-  const navigate = (next: Route) => setRoute(next)
+  const navigate = (next: Route): void => setRoute(next)
 
   switch (route.page) {
     case 'research-input':

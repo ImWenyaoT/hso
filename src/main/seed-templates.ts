@@ -68,7 +68,7 @@ const TEMPLATE_FIXTURES = [
  * 插入模板 fixture
  * 幂等操作：仅在 template 表为空时执行
  */
-export function seedTemplates(sqlite: Database.Database) {
+export function seedTemplates(sqlite: Database.Database): void {
   const count = (sqlite.prepare('SELECT COUNT(*) as cnt FROM template').get() as { cnt: number }).cnt
   if (count > 0) return
 

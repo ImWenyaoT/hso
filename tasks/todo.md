@@ -1,5 +1,22 @@
 # Task Todo
 
+## 当前任务：过去 24 小时提交巡检与自修复
+
+- [x] 读取 automation memory、架构文档、产品契约与 lessons
+- [x] 检查过去 24 小时 git 提交与默认分支状态
+- [x] 安装依赖并运行 lint / test / build，定位确定性回归
+- [x] 修复确认的问题并补充必要验证
+- [x] 记录 review 结论、验证结果与剩余风险
+
+### Review
+
+- 过去 24 小时仅发现 1 个提交：`32f2b4a feat: scaffold Electron app and consolidate docs`
+- 确定性回归 1：`package.json` 已声明 `npm run lint`，但仓库缺少 ESLint 配置，命令不可用
+- 确定性回归 2：`package.json` 已声明 `npm run test`，但仓库没有任何测试文件，命令稳定失败
+- 已修复：新增 `.eslintrc.cjs`，补齐最小 Vitest 基线 `tests/id.test.ts`
+- 已修复：按 ESLint 规则补齐显式返回类型，并删除未使用导入/变量
+- 验证通过：`npm run lint`、`npm run test`、`npm run build`
+
 ## 当前任务：文档优化
 
 - [x] 更新 CLAUDE.md（移除 Next.js/规划阶段描述，改为 Electron/编码阶段）

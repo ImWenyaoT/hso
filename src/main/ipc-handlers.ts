@@ -20,7 +20,7 @@ import type {
  * 注册所有 IPC handlers
  * 在 app.whenReady() 后、创建窗口前调用
  */
-export function registerIpcHandlers() {
+export function registerIpcHandlers(): void {
   // ── 研究输入 ────────────────────────────────────
 
   /**
