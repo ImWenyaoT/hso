@@ -33,11 +33,7 @@ Thumbs.db
 .env.local
 *.env.bak
 
-# Claude Code 项目级配置（不入仓库）
-.claude/
-
-# 内部 todo（仓库外维护）
-tasks/
+# Claude Code 项目级配置入仓库以保留 dev 配置；secrets 已在 .env 隔离
 
 # data
 data/.cache/
