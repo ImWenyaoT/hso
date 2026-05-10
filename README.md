@@ -10,7 +10,7 @@
 
 1. **检索**：自动搜近 N 年中科院 Q1/Q2 期刊论文（arXiv + Semantic Scholar + ShowJCR 分区过滤）
 2. **归纳**：让 LLM 总结这个领域大家**怎么写** —— intro 套路、experiment 章节常用图表、少被讨论的角度
-3. **起草**（Phase 2.3 进行中）：基于上面的"风格画像" + 你的实验数据，由 agent 自主调用工具（`cite_paper` / `insert_table` / `insert_figure` 等）逐章起草 LaTeX
+3. **起草**：基于上面的"风格画像" + 你的实验数据，生成 `main.tex` / `refs.bib` / `tables/` / `figs/` 的 Elsevier LaTeX 项目目录
 4. **审稿循环**（Phase 3）：另一个 agent 扮 Q1 审稿人发 issues，原 agent 改稿，loop 到收敛
 
 ## 现在能跑通的端到端
@@ -33,6 +33,14 @@ uv run hso analyze \
 
 # 4. 验证 Agents SDK runtime（OAuth backend + 工具调用）
 uv run python scripts/agents_smoke.py
+
+# 5. 起草完整 LaTeX 项目目录
+cp tests/fixtures/experiment.json output/demo/experiment.json
+uv run hso draft \
+  --profile output/demo/profile.json \
+  --experiment output/demo/experiment.json \
+  --papers output/demo/papers.json \
+  --out output/demo/draft
 ```
 
 详见 [docs/quickstart.md](docs/quickstart.md)。
@@ -114,7 +122,8 @@ hso analyze --auth-mode api_key   # 强制 API key
 1. **Phase 1** ✅ 检索 + 章节结构分析
 2. **Phase 2** ✅ Elsevier 模板 + LaTeX 表格 + 时序图 + Outline + Drafter (基础设施层)
 3. **Phase 2.5** ✅ OAuth ("Sign in with ChatGPT") 端到端打通
-4. **Phase 3** 🚧 重构为真 agent：把 Outline/Drafter 包成 Agents SDK loop + tools；加 ReviewLoopAgent
+4. **Phase 2.3** ✅ Manuscript 装配 + `hso draft` CLI + 可选 LaTeX 编译
+5. **Phase 3** 🚧 重构为真 agent：把 Outline/Drafter 包成 Agents SDK loop + tools；加 ReviewLoopAgent
 5. **Phase 4** 装配 + LaTeX 编译 + Web UI（FastAPI + Next.js）
 
 ## 测试

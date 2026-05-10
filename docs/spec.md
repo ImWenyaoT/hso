@@ -1,7 +1,7 @@
 # hso — 项目 Spec
 
-> 版本：v0.1（2026-05-09）
-> 当前阶段：Phase 1 已完成
+> 版本：v0.2（2026-05-10）
+> 当前阶段：Phase 2.3 已实现
 
 ## 1. 目标
 
@@ -36,6 +36,8 @@ src/hso/
 ├── llm/           # OpenAI Responses API 封装：parse() / respond() + 磁盘缓存 + 重试
 ├── literature/    # PaperProvider 抽象 + arXiv / Semantic Scholar + JCR 过滤 + 聚合去重
 ├── synthesis/     # LLM 驱动的章节结构归纳（structured output）
+├── manuscript/    # Outline / Drafter / Assembler / LaTeX 编译 / 模板与图表
+├── agents/        # OpenAI Agents SDK runtime 配置
 ├── config.py      # pydantic-settings：HSO_* 环境变量
 └── cli.py         # typer 入口
 ```
@@ -70,6 +72,7 @@ src/hso/
 ```bash
 hso search "<query>" --years 2 --max-zone 2 --top-k 30 [--out output/r.json]
 hso analyze --input output/r.json --out output/profile.json
+hso draft --profile output/profile.json --experiment data/processed/exp.json --papers output/r.json --out output/draft/
 ```
 
 需要的环境变量见 `.env.example`：
@@ -94,7 +97,7 @@ hso analyze --input output/r.json --out output/profile.json
 | 阶段 | 目标 | 状态 |
 |---|---|---|
 | **Phase 1** | 检索 + 章节结构分析 | ✅ 完成 2026-05-09 |
-| **Phase 2** | Elsevier 模板填充器；用户实验数据 (CSV/JSON) → LaTeX 表格/图（matplotlib + tikzplotlib）；产出可编译 .tex | 待开始 |
+| **Phase 2** | Elsevier 模板填充器；用户实验数据 (CSV/JSON) → LaTeX 表格/图（matplotlib）；产出 LaTeX 项目目录 | ✅ 完成 2.1/2.2/2.3 |
 | **Phase 3** | 模拟审稿 loop：参考 AgentReview，硬上限 N 轮 + 收敛判定 | 待开始 |
 | **Phase 4** | Web UI（FastAPI + 简单前端） | 待开始 |
 

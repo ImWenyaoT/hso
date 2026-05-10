@@ -38,15 +38,33 @@
 - [x] `resolve_citekeys`：正文占位 → 真实 cite key；未匹配 paper_id 报告
 - [x] `check_citation_consistency`：正文 vs declared 双向集合差
 - [x] **per-metric direction 表格 bug 修复**（顺手完成 §2.4）：`directions={"FID": "min", "CLIP-Score": "max"}` + `default_direction`
-- [x] **LLMClient 预留 `auth_mode` 接口位**：`'api_key'`（实现）/ `'oauth'`（NotImplementedError），等 OpenAI 审批
+- [x] **LLMClient `auth_mode` 双后端**：`'api_key'` 走 Responses API；`'oauth'` 走 ChatGPT Codex backend（stream + refresh）
 - [x] 102 测试，coverage 85.65%
 
-### Phase 2.3：装配与编译（待开始）
+### Phase 2.3：装配与编译 ✅ 完成 2026-05-10
 
-- [ ] `ManuscriptAssembler`：Outline → 多个 DraftedSection → 一份完整 .tex 项目目录（main.tex + refs.bib + figs/ + tables/）
-- [ ] 端到端 pipeline：`SectionProfile + Experiment + Papers → ManuscriptDocument`
-- [ ] LaTeX 编译（latexmk / tectonic）+ error 定位
-- [ ] CLI：`hso draft --profile profile.json --experiment exp.json --papers search.json --out output/draft/`
+- [x] `ManuscriptAssembler`：Outline → 多个 DraftedSection → 一份完整 .tex 项目目录（main.tex + refs.bib + figs/ + tables/）
+- [x] 端到端 pipeline：`SectionProfile + Experiment + Papers → ManuscriptDocument`
+- [x] LaTeX 编译（latexmk / tectonic）+ error 定位
+- [x] CLI：`hso draft --profile profile.json --experiment exp.json --papers search.json --out output/draft/`
+
+### 2026-05-10 Project Optimization Plan
+
+目标：把当前项目从“Phase 2.2 utility 已完成”优化到“Phase 2.3 可通过 CLI 产出完整 manuscript 项目目录”，同时修掉质量门禁和文档明显漂移。
+
+- [x] 设计并实现纯装配层：`ManuscriptAssembler` 只负责文件、引用、图表、模板装配，不调用 LLM
+- [x] 设计并实现 pipeline 层：`DraftPipeline` 串起 `OutlineBuilder`、`SectionDrafter`、`ManuscriptAssembler`
+- [x] 设计并实现编译层：`LatexCompiler` 封装 `latexmk` / `tectonic`，返回结构化结果和错误摘要
+- [x] 接入 CLI：新增 `hso draft --profile --experiment --papers --out [--compile]`
+- [x] 补测试：assembler / pipeline / compiler / CLI 的离线测试，不依赖真实 LLM 或外网
+- [x] 修质量门禁：CI 中 mypy 变为阻塞；ruff 覆盖 `scripts/`
+- [x] 修文档漂移：`.env.example` 改为 `HSO_*`；README / quickstart / spec 同步当前阶段
+- [ ] 验证：`ruff`、`mypy`、`pytest` 全通过，并在本节记录结果
+
+Review:
+- 已通过：`.venv/bin/python -m compileall -q src tests scripts`
+- 已通过：`ManuscriptAssembler` 离线 smoke，可写出 `main.tex`、`tables/main_results.tex`、`figs/train_loss.pdf`
+- 未完成：`uv run --extra dev ruff/mypy/pytest` 因 PyPI wheel 下载长时间卡住，已按用户指示先 push
 
 ### Phase 2.5：OAuth ("Sign in with ChatGPT") ✅ 完成 2026-05-09（端到端验证通过）
 

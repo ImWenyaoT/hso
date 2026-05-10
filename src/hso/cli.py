@@ -20,7 +20,8 @@ from hso.literature import (
     SemanticScholarProvider,
 )
 from hso.llm import LLMClient, clear_auth, load_auth, login, refresh_and_save
-from hso.models import Paper, SearchQuery
+from hso.manuscript import DraftPipeline, ExperimentLoader, LatexCompiler
+from hso.models import Paper, SearchQuery, SectionProfile
 from hso.synthesis import SectionProfileBuilder
 
 app = typer.Typer(help="Manuscript Agent CLI", no_args_is_help=True)
@@ -176,6 +177,69 @@ def analyze(
     console.print(f"  归纳章节数：{len(profile.sections)}")
 
 
+@app.command()
+def draft(
+    profile: Annotated[Path, typer.Option("--profile", help="SectionProfile JSON 路径")],
+    experiment: Annotated[Path, typer.Option("--experiment", help="Experiment JSON 路径")],
+    papers: Annotated[Path, typer.Option("--papers", help="search 命令输出的 JSON 路径")],
+    out: Annotated[Path, typer.Option("--out", "-o", help="输出 LaTeX 项目目录")],
+    auth_mode: Annotated[
+        str,
+        typer.Option(
+            "--auth-mode",
+            help="auto / oauth / api_key。auto 优先用 OAuth（如已登录），否则 fallback 到 API key",
+        ),
+    ] = "auto",
+    model: Annotated[
+        str | None,
+        typer.Option(help="覆盖默认模型；OAuth 默认 gpt-5.2，api_key 默认 settings 中的值"),
+    ] = None,
+    journal: Annotated[str, typer.Option(help="Elsevier 模板中的 journal 名称")] = "Journal Name",
+    compile_pdf: Annotated[
+        bool,
+        typer.Option("--compile/--no-compile", help="生成后是否尝试调用 latexmk/tectonic 编译 PDF"),
+    ] = False,
+    verbose: Annotated[bool, typer.Option("-v", "--verbose")] = False,
+) -> None:
+    """从 profile / experiment / papers 端到端起草 manuscript LaTeX 项目。"""
+    _setup_logging(verbose)
+    settings = load_settings()
+    section_profile = SectionProfile.model_validate_json(profile.read_text(encoding="utf-8"))
+    experiment_data = ExperimentLoader.from_json(experiment)
+    candidate_papers = _load_papers_from_search(papers)
+
+    llm = _build_llm(settings, auth_mode=auth_mode, model_override=model)
+    result = DraftPipeline(llm).run(
+        section_profile=section_profile,
+        experiment=experiment_data,
+        papers=candidate_papers,
+        output_dir=out,
+        journal=journal,
+    )
+
+    console.print(f"[green]Manuscript project 已生成[/green] → {result.assembly.output_dir}")
+    console.print(f"  main.tex: {result.assembly.main_tex_path}")
+    console.print(f"  refs.bib: {result.assembly.refs_bib_path}")
+    console.print(f"  sections: {len(result.drafted_sections)}")
+    if result.assembly.unresolved_citations:
+        console.print(
+            "[yellow]未解析 citations:[/yellow] "
+            + ", ".join(result.assembly.unresolved_citations)
+        )
+    if result.assembly.missing_artifacts:
+        console.print(
+            "[yellow]缺失 artifacts:[/yellow] " + ", ".join(result.assembly.missing_artifacts)
+        )
+
+    if compile_pdf:
+        compile_result = LatexCompiler().compile(result.assembly.main_tex_path)
+        if compile_result.success:
+            console.print(f"[green]PDF 编译成功[/green] → {compile_result.pdf_path}")
+        else:
+            console.print(f"[red]PDF 编译失败[/red] {compile_result.error_summary}")
+            raise typer.Exit(code=3)
+
+
 @app.command(name="login")
 def login_cmd(
     open_browser: Annotated[
@@ -238,6 +302,13 @@ def whoami_cmd() -> None:
             )
         except Exception as e:
             console.print(f"[red]refresh 失败：{e}；请重新登录。[/red]")
+
+
+def _load_papers_from_search(path: Path) -> list[Paper]:
+    """读取 search 命令输出，兼容顶层 list 或包含 papers 字段的对象。"""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    raw_papers = payload.get("papers", []) if isinstance(payload, dict) else payload
+    return [Paper.model_validate(p) for p in raw_papers]
 
 
 def _print_papers(papers: list[Paper]) -> None:

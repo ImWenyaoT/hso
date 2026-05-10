@@ -1,15 +1,13 @@
 # 5 分钟体验：从零跑通 hso
 
-> 当前能跑通的端到端形态：**研究方向 → 检索 Q2+ 论文 → LLM 总结这些论文的章节写作惯例 → 输出 SectionProfile JSON**。
->
-> 起草成完整 .tex（Phase 2.3）还没串成 CLI，但基础设施都在了。下面 demo 走 Phase 1 + Phase 2.1/2.2 的 LLM 部分。
+> 当前能跑通的端到端形态：**研究方向 → 检索 Q2+ 论文 → LLM 总结章节写作惯例 → 结合实验数据起草完整 Elsevier LaTeX 项目目录**。
 
 ## 0. 准备
 
 一次性：
 
 ```bash
-cd ~/Desktop/kendrick_lamar
+cd /Users/edward/Documents/hso
 uv sync --extra dev
 ```
 
@@ -72,23 +70,45 @@ cat output/demo/profile.json | uv run python -m json.tool | head -50
 
 或在 IDE 里打开 [output/demo/profile.json](../output/demo/profile.json)。
 
-## 现在还没做完的（Phase 2.3）
+## 5. 准备实验数据
 
-下面这些代码都写好了，但还没接进 CLI：
+实验数据 JSON 与 `Experiment` schema 对齐即可。可以先用内置 fixture 体验：
 
-| 模块 | 现状 |
+```bash
+cp tests/fixtures/experiment.json output/demo/experiment.json
+```
+
+## 6. 起草完整 LaTeX 项目
+
+```bash
+uv run hso draft \
+  --profile output/demo/profile.json \
+  --experiment output/demo/experiment.json \
+  --papers output/demo/papers.json \
+  --out output/demo/draft
+```
+
+输出目录包含：
+
+| 文件/目录 | 说明 |
 |---|---|
-| ExperimentLoader | 能从 JSON/CSV 加载实验数据 |
-| ElsevierTemplate | 能渲染 elsarticle.cls 主文件 |
-| `results_to_latex_table` | 能生成 booktabs 表格 |
-| `render_timeseries_figure` | 能输出 matplotlib PDF |
-| OutlineBuilder | 能基于 SectionProfile + Experiment 生成大纲（OAuth/api_key 都通） |
-| SectionDrafter | 能逐章起草正文（带 \cite 占位） |
-| `papers_to_bib_entries` | 能生成 .bib + cite key 解析 |
+| `main.tex` | Elsevier `elsarticle.cls` 主文件 |
+| `refs.bib` | 从检索论文生成的 BibTeX |
+| `tables/` | 从实验 results 生成的 LaTeX 表格 |
+| `figs/` | 从时序数据生成的 PDF 图 |
 
-**还差**：把这些串成 `hso draft --profile profile.json --experiment exp.json --papers papers.json --out output/draft/` 一条 CLI 命令，输出可编译的 LaTeX 项目目录。
+如本机装了 `latexmk` 或 `tectonic`，可直接尝试编译：
 
-## 想看 Phase 2.1 已有能力的 demo？
+```bash
+uv run hso draft \
+  --profile output/demo/profile.json \
+  --experiment output/demo/experiment.json \
+  --papers output/demo/papers.json \
+  --out output/demo/draft \
+  --compile
+```
+
+## 想看底层 utility 怎么用？
 
 ```bash
 uv run python <<'EOF'
