@@ -1,10 +1,11 @@
-"""OpenAI Agents SDK 集成层。
+"""Agent runtime primitives and OpenAI Agents SDK integration.
 
-把 hso 现有的 OAuth backend / cache / settings 注入 Agents SDK，让 ``Agent`` /
-``Runner`` 能复用我们已有的 ChatGPT 后端协议（store=False / stream / 自定义
-header / model name 转换）。
+The gateway starts with a deterministic local orchestrator for offline development
+and keeps the existing OpenAI Agents SDK runtime available for the next migration
+step.
 """
 
+from hso.agents.local import AgentEventDraft, LocalAgentOrchestrator
 from hso.agents.runtime import (
     HSOAgentRuntime,
     build_runtime,
@@ -12,7 +13,9 @@ from hso.agents.runtime import (
 )
 
 __all__ = [
+    "AgentEventDraft",
     "HSOAgentRuntime",
+    "LocalAgentOrchestrator",
     "build_runtime",
     "set_default_runtime",
 ]

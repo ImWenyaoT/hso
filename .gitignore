@@ -18,11 +18,14 @@ dist/
 .venv/
 venv/
 .python-version
+node_modules/
+.next/
 
 # IDE
 .vscode/
 .idea/
 *.swp
+*.code-workspace
 
 # OS
 .DS_Store

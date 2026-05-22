@@ -1,7 +1,7 @@
 [project]
 name = "hso"
 version = "0.2.0"
-description = "AI agent that drafts Elsevier-format LaTeX manuscripts from user experiments."
+description = "Local-first research agent gateway with Python runtime and Next.js operator UI."
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "kendrick_lamar M3" }]
@@ -23,6 +23,8 @@ dependencies = [
     "pandas>=2.2",
     "matplotlib>=3.8",
     "openai-agents>=0.17",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
 ]
 
 [project.optional-dependencies]

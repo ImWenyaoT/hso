@@ -1,12 +1,12 @@
 """manuscript 起草模块：大纲、章节起草、模板填充、表格/图、bibtex。"""
 
+from hso.manuscript.assembler import AssemblyResult, ManuscriptAssembler
 from hso.manuscript.bibliography import (
     check_citation_consistency,
     papers_to_bib_entries,
     render_bibfile,
     resolve_citekeys,
 )
-from hso.manuscript.assembler import AssemblyResult, ManuscriptAssembler
 from hso.manuscript.compiler import CompileResult, LatexCompiler
 from hso.manuscript.drafter import SectionDrafter
 from hso.manuscript.figures import render_timeseries_figure

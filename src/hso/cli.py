@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+import uvicorn
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.table import Table
@@ -238,6 +239,32 @@ def draft(
         else:
             console.print(f"[red]PDF 编译失败[/red] {compile_result.error_summary}")
             raise typer.Exit(code=3)
+
+
+@app.command()
+def start(
+    host: Annotated[str, typer.Option(help="Gateway 监听地址")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="Gateway 监听端口")] = 8765,
+    reload: Annotated[bool, typer.Option("--reload/--no-reload", help="是否开启开发热重载")] = False,
+) -> None:
+    """启动 hso Python gateway，供 Web UI / CLI 控制面连接。"""
+    console.print(f"[cyan]hso gateway[/cyan] listening on http://{host}:{port}")
+    uvicorn.run(
+        "hso.gateway.app:create_app",
+        factory=True,
+        host=host,
+        port=port,
+        reload=reload,
+    )
+
+
+@app.command()
+def status(
+    host: Annotated[str, typer.Option(help="Gateway 地址")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="Gateway 端口")] = 8765,
+) -> None:
+    """打印本地 gateway 的健康检查地址。"""
+    console.print(f"hso gateway health: http://{host}:{port}/api/health")
 
 
 @app.command(name="login")
