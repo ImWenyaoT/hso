@@ -16,6 +16,7 @@ import webbrowser
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
@@ -248,9 +249,9 @@ class _Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         qs = parse_qs(parsed.query)
-        self.result.code = (qs.get("code") or [None])[0]
-        self.result.state = (qs.get("state") or [None])[0]
-        self.result.error = (qs.get("error") or [None])[0]
+        self.result.code = qs.get("code", [None])[0]
+        self.result.state = qs.get("state", [None])[0]
+        self.result.error = qs.get("error", [None])[0]
 
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -282,6 +283,7 @@ def wait_for_callback(port: int = DEFAULT_PORT, timeout_seconds: int = 300) -> _
     _Handler.done_event = done
 
     server = HTTPServer(("127.0.0.1", port), _Handler)
+    server.timeout = 0.5
 
     def _serve() -> None:
         while not done.is_set():
@@ -290,9 +292,12 @@ def wait_for_callback(port: int = DEFAULT_PORT, timeout_seconds: int = 300) -> _
     thread = threading.Thread(target=_serve, daemon=True)
     thread.start()
     if not done.wait(timeout=timeout_seconds):
+        done.set()
         server.server_close()
+        thread.join(timeout=1)
         raise TimeoutError(f"OAuth callback 超时（{timeout_seconds}s 内未收到）")
     server.server_close()
+    thread.join(timeout=1)
     return result
 
 
@@ -305,7 +310,7 @@ def login(
     port: int = DEFAULT_PORT,
     timeout_seconds: int = 300,
     http_client: httpx.Client | None = None,
-    auth_path: Path | None = None,  # noqa: F821 — 可选注入测试路径
+    auth_path: Path | None = None,
 ) -> StoredAuth:
     """完整登录流程：弹浏览器 → 等回调 → 换 token → 落盘。
 
@@ -354,7 +359,7 @@ def refresh_and_save(
     auth: StoredAuth,
     *,
     http_client: httpx.Client | None = None,
-    auth_path: Path | None = None,  # noqa: F821
+    auth_path: Path | None = None,
 ) -> StoredAuth:
     """用现有 refresh_token 换新 access_token，并写回磁盘。"""
     payload = refresh_access_token(refresh_token=auth.refresh_token, http_client=http_client)

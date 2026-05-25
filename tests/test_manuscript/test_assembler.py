@@ -122,6 +122,41 @@ class TestManuscriptAssembler:
 
         assert result.missing_artifacts == ["fig:not_available"]
 
+    def test_renders_duplicate_artifacts_once(self, tmp_path, sample_papers: list[Paper], monkeypatch) -> None:
+        """Repeated planned artifacts are rendered once and reused in section snippets."""
+        calls = {"table": 0, "figure": 0}
+
+        def fake_table(*_args, **_kwargs) -> str:
+            calls["table"] += 1
+            return "\\begin{table}\\end{table}"
+
+        def fake_figure(_timeseries, output_path, **_kwargs):
+            calls["figure"] += 1
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("pdf", encoding="utf-8")
+            return output_path
+
+        monkeypatch.setattr("hso.manuscript.assembler.results_to_latex_table", fake_table)
+        monkeypatch.setattr("hso.manuscript.assembler.render_timeseries_figure", fake_figure)
+        outline = _outline()
+        outline.sections[0].planned_artifacts = ["table:main_results", "fig:train_loss"]
+        outline.sections[1].planned_artifacts = ["table:main_results", "fig:train_loss"]
+        drafted = _drafted_sections()
+        drafted[0].used_artifact_ids = ["table:main_results", "fig:train_loss"]
+        drafted[1].used_artifact_ids = ["table:main_results", "fig:train_loss"]
+
+        result = ManuscriptAssembler().assemble(
+            outline=outline,
+            drafted_sections=drafted,
+            experiment=_fallback_experiment(),
+            papers=sample_papers[:1],
+            output_dir=tmp_path / "draft",
+        )
+
+        assert calls == {"table": 1, "figure": 1}
+        assert len(result.table_paths) == 1
+        assert len(result.figure_paths) == 1
+
 
 def _fallback_experiment() -> Experiment:
     """构造不依赖外部文件的实验 fixture。"""

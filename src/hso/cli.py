@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 import uvicorn
@@ -13,7 +13,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 from rich.table import Table
 
-from hso.config import load_settings
+from hso.config import Settings, load_settings
 from hso.literature import (
     ArxivProvider,
     JCRFilter,
@@ -48,7 +48,7 @@ def _build_aggregator(jcr_path: Path | None, s2_api_key: str) -> SearchAggregato
     return SearchAggregator(providers=providers, jcr_filter=jcr_filter)
 
 
-def _papers_to_jsonable(papers: list[Paper]) -> list[dict]:
+def _papers_to_jsonable(papers: list[Paper]) -> list[dict[str, Any]]:
     """把 Paper 列表序列化为可写 JSON 的 dict（处理 date / pydantic）。"""
     return [json.loads(p.model_dump_json()) for p in papers]
 
@@ -99,25 +99,33 @@ def search(
 
 
 def _build_llm(
-    settings,
+    settings: Settings,
     auth_mode: str,
     model_override: str | None = None,
 ) -> LLMClient:
-    """根据 auth_mode 装配 LLMClient。
+    """根据 auth_mode/provider 装配 LLMClient。
 
-    - ``auto``：先看 ~/.config/hso/auth.json 是否存在；有就 OAuth，否则 api_key
+    - ``auto``：使用 ``LLM_PROVIDER`` / ``HSO_LLM_PROVIDER`` 选择 provider
     - ``oauth``：强制 OAuth（未登录抛错）
-    - ``api_key``：强制 API key
+    - ``gpt``：强制 OpenAI Responses API provider
+    - ``deepseek`` / ``custom`` / ``xai`` / ``legacy``：强制 Chat Completions 兼容 provider
+    - ``api_key``：兼容旧参数，等同 legacy
     """
     if auth_mode == "auto":
-        auth_mode = "oauth" if load_auth() is not None else "api_key"
-
-    if auth_mode == "oauth":
-        # OAuth 模式默认走 ChatGPT 后端可用模型；用户可用 --model 覆盖
-        model = model_override or "gpt-5.2"
+        backend = settings.active_llm_backend()
+    elif auth_mode == "api_key":
+        backend = settings.model_copy(update={"llm_provider": "legacy"}).active_llm_backend()
+    elif auth_mode in ("deepseek", "custom", "oauth", "legacy", "gpt", "xai"):
+        backend = settings.model_copy(update={"llm_provider": auth_mode}).active_llm_backend()
+    else:
         console.print(
-            f"[cyan]使用 OAuth (ChatGPT 订阅)[/cyan] · model={model}"
+            "[red]未知 auth/provider。可用值：auto / gpt / deepseek / custom / xai / oauth / legacy / api_key。[/red]"
         )
+        raise typer.Exit(code=2)
+
+    model = model_override or backend.model
+    if backend.auth_mode == "oauth":
+        console.print(f"[cyan]使用 OAuth (ChatGPT 订阅)[/cyan] · model={model}")
         return LLMClient(
             auth_mode="oauth",
             model=model,
@@ -125,19 +133,19 @@ def _build_llm(
             cache_dir=settings.cache_dir / "llm",
         )
 
-    if not settings.llm_api_key:
+    if not backend.api_key:
         console.print(
-            "[red]auth_mode=api_key 但 HSO_LLM_API_KEY 未设置。请配置 .env，或先 `hso login`。[/red]"
+            f"[red]provider={backend.provider} 但 API key 未设置。请配置 .env，或切换 provider。[/red]"
         )
         raise typer.Exit(code=2)
-    model = model_override or settings.llm_model
-    console.print(f"[cyan]使用 API key[/cyan] · model={model}")
+    console.print(f"[cyan]使用 {backend.provider} API key[/cyan] · model={model}")
     return LLMClient(
-        api_key=settings.llm_api_key,
-        base_url=settings.llm_base_url,
+        api_key=backend.api_key,
+        base_url=backend.base_url,
         model=model,
         timeout=settings.llm_timeout,
         cache_dir=settings.cache_dir / "llm",
+        api_surface=backend.api_surface,
     )
 
 
@@ -149,12 +157,12 @@ def analyze(
         str,
         typer.Option(
             "--auth-mode",
-            help="auto / oauth / api_key。auto 优先用 OAuth（如已登录），否则 fallback 到 API key",
+            help="auto / gpt / deepseek / custom / xai / oauth / legacy / api_key。auto 使用 LLM_PROVIDER",
         ),
     ] = "auto",
     model: Annotated[
         str | None,
-        typer.Option(help="覆盖默认模型；OAuth 默认 gpt-5.2，api_key 默认 settings 中的值"),
+        typer.Option(help="覆盖默认模型；GPT 默认 gpt-5.4-mini，OAuth 默认 gpt-5.2"),
     ] = None,
     verbose: Annotated[bool, typer.Option("-v", "--verbose")] = False,
 ) -> None:
@@ -188,12 +196,12 @@ def draft(
         str,
         typer.Option(
             "--auth-mode",
-            help="auto / oauth / api_key。auto 优先用 OAuth（如已登录），否则 fallback 到 API key",
+            help="auto / gpt / deepseek / custom / xai / oauth / legacy / api_key。auto 使用 LLM_PROVIDER",
         ),
     ] = "auto",
     model: Annotated[
         str | None,
-        typer.Option(help="覆盖默认模型；OAuth 默认 gpt-5.2，api_key 默认 settings 中的值"),
+        typer.Option(help="覆盖默认模型；GPT 默认 gpt-5.4-mini，OAuth 默认 gpt-5.2"),
     ] = None,
     journal: Annotated[str, typer.Option(help="Elsevier 模板中的 journal 名称")] = "Journal Name",
     compile_pdf: Annotated[

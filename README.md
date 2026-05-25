@@ -6,7 +6,7 @@ local-first agent gateway for research workflows.
 The target shape is:
 
 - **Python core**: gateway, memory, agent runtime, sub-agent orchestration, tools,
-  persistence, CLI, and OpenAI SDK integration.
+  persistence, CLI, and LLM SDK integration.
 - **TypeScript frontend only**: a Next.js operator workspace that talks to the Python
   gateway over local HTTP APIs.
 - **CLI as control plane**: `hso start` launches the local gateway; existing
@@ -19,7 +19,8 @@ Next.js UI
   -> /api/* rewrite
 Python FastAPI gateway
   -> GatewayRuntime
-  -> MemoryStore JSONL
+  -> GatewaySQLiteStore SQLite sessions/events
+  -> MemoryStore SQLite memory
   -> LocalAgentOrchestrator
 ```
 
@@ -41,6 +42,13 @@ Install Python dependencies:
 ```bash
 uv sync --extra dev
 ```
+
+For API-key backends, create `/Users/edward/Documents/hso/.env` from `.env.example`.
+`LLM_PROVIDER=gpt` is the default and uses `OPENAI_API_KEY` /
+`OPENAI_BASE_URL` through the OpenAI Responses API. Switch to
+`LLM_PROVIDER=deepseek`, `custom`, or `xai` for OpenAI-compatible Chat
+Completions endpoints, or `LLM_PROVIDER=oauth` after `uv run hso login` to use
+the personal ChatGPT OAuth path.
 
 Start the Python gateway:
 
@@ -80,7 +88,7 @@ as gateway tools and agent/sub-agent workflows.
 
 hso intentionally does not use LangChain or LangGraph as the main spine. The
 project uses explicit gateway/session/memory/tool boundaries and keeps the OpenAI
-Agents SDK / Responses API behind the Python runtime layer.
+Agents SDK / Responses API integration behind the Python runtime layer.
 
 The frontend must not call OpenAI directly. Secrets, memory writes, tool execution,
 and agent orchestration stay inside the Python gateway.

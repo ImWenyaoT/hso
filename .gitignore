@@ -18,6 +18,7 @@ dist/
 .venv/
 venv/
 .python-version
+.uv-cache/
 node_modules/
 .next/
 

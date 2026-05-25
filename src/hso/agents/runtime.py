@@ -17,7 +17,7 @@ from typing import Literal
 import httpx
 from agents import (
     ModelSettings,
-    OpenAIResponsesModel,
+    OpenAIChatCompletionsModel,
     set_default_openai_client,
     set_tracing_disabled,
 )
@@ -34,7 +34,7 @@ _OAUTH_BASE_URL = "https://chatgpt.com/backend-api/codex"
 
 # OAuth 模式的默认模型（来自 /codex/models slug 列表，2026-05 实测）
 _OAUTH_DEFAULT_MODEL = "gpt-5.2"
-_API_KEY_DEFAULT_MODEL = "gpt-4o-mini"
+_API_KEY_DEFAULT_MODEL = "deepseek-v4-flash"
 
 
 @dataclass
@@ -45,9 +45,14 @@ class HSOAgentRuntime:
     """
 
     auth_mode: AuthMode
-    model: OpenAIResponsesModel
+    model: OpenAIChatCompletionsModel
     model_settings: ModelSettings
     stored_auth: StoredAuth | None  # OAuth 模式下持有；api_key 模式 None
+    openai_client: AsyncOpenAI
+
+    async def aclose(self) -> None:
+        """Close the underlying async OpenAI HTTP client."""
+        await self.openai_client.close()
 
 
 def _build_async_client(
@@ -137,12 +142,13 @@ def build_runtime(
 
     set_default_openai_client(client, use_for_tracing=False)
 
-    model = OpenAIResponsesModel(model=chosen_model, openai_client=client)
+    model = OpenAIChatCompletionsModel(model=chosen_model, openai_client=client)
     return HSOAgentRuntime(
         auth_mode=auth_mode,
         model=model,
         model_settings=model_settings,
         stored_auth=stored,
+        openai_client=client,
     )
 
 

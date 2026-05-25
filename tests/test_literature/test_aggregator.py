@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from datetime import date
 
 from hso.literature.aggregator import SearchAggregator
@@ -22,6 +23,14 @@ class _StubProvider(PaperProvider):
         if self._raise:
             raise RuntimeError("simulated provider failure")
         return self._papers
+
+
+class _SlowProvider(_StubProvider):
+    """Slow provider stub used to verify provider-level parallelism."""
+
+    def search(self, query: SearchQuery) -> list[Paper]:
+        time.sleep(0.2)
+        return super().search(query)
 
 
 def _make_paper(
@@ -47,6 +56,16 @@ def _make_paper(
 
 
 class TestDeduplication:
+    def test_deduplicate_accepts_one_shot_iterable(self) -> None:
+        """Deduplication should not require callers to pre-materialize all papers."""
+        p1 = _make_paper("arxiv:1", arxiv_id="1234.5678", title="Same paper", citations=5)
+        p2 = _make_paper("doi:10.1/x", doi="10.1/x", title="Same paper", citations=20)
+
+        out = SearchAggregator._deduplicate(paper for paper in [p1, p2])
+
+        assert len(out) == 1
+        assert out[0].citation_count == 20
+
     def test_dedup_by_doi(self) -> None:
         p1 = _make_paper("arxiv:1", arxiv_id="1234.5678", title="Same paper", citations=5)
         p2 = _make_paper("doi:10.1/x", doi="10.1/x", title="Same paper", citations=20)
@@ -83,6 +102,24 @@ class TestProviderResilience:
         )
         out = agg.search(SearchQuery(query="x"))
         assert len(out) == 1
+
+    def test_providers_run_in_parallel(self) -> None:
+        """SearchAggregator should not serialize independent provider calls."""
+        first = _make_paper("arxiv:1", arxiv_id="1.1", title="A")
+        second = _make_paper("arxiv:2", arxiv_id="2.2", title="B")
+        agg = SearchAggregator(
+            [
+                _SlowProvider("one", [first]),
+                _SlowProvider("two", [second]),
+            ]
+        )
+
+        started = time.perf_counter()
+        out = agg.search(SearchQuery(query="x"))
+        elapsed = time.perf_counter() - started
+
+        assert len(out) == 2
+        assert elapsed < 0.35
 
 
 class TestJCRIntegration:

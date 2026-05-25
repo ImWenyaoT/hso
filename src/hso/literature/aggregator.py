@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import logging
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from itertools import chain
 
 from hso.literature.base import PaperProvider
 from hso.literature.jcr_filter import JCRFilter
@@ -37,18 +39,25 @@ class SearchAggregator:
         self._jcr = jcr_filter
 
     def search(self, query: SearchQuery) -> list[Paper]:
-        """串行调用所有 provider，去重，再按 JCR 过滤。"""
-        all_papers: list[Paper] = []
-        for provider in self._providers:
-            try:
-                results = provider.search(query)
-                logger.info("provider=%s 返回 %d 条", provider.name, len(results))
-                all_papers.extend(results)
-            except Exception as e:
-                logger.warning("provider=%s 失败：%s", provider.name, e)
+        """并行调用所有 provider，去重，再按 JCR 过滤。"""
+        provider_results: list[list[Paper]] = [[] for _ in self._providers]
+        with ThreadPoolExecutor(max_workers=max(1, len(self._providers))) as executor:
+            future_to_provider = {
+                executor.submit(provider.search, query): (idx, provider)
+                for idx, provider in enumerate(self._providers)
+            }
+            for future in as_completed(future_to_provider):
+                idx, provider = future_to_provider[future]
+                try:
+                    results = future.result()
+                    logger.info("provider=%s 返回 %d 条", provider.name, len(results))
+                    provider_results[idx] = results
+                except Exception as e:
+                    logger.warning("provider=%s 失败：%s", provider.name, e)
 
-        deduped = self._deduplicate(all_papers)
-        logger.info("聚合后 %d 条 → 去重后 %d 条", len(all_papers), len(deduped))
+        raw_count = sum(len(results) for results in provider_results)
+        deduped = self._deduplicate(chain.from_iterable(provider_results))
+        logger.info("聚合后 %d 条 → 去重后 %d 条", raw_count, len(deduped))
 
         if self._jcr is not None:
             filtered = self._jcr.filter(
@@ -59,24 +68,15 @@ class SearchAggregator:
         return deduped
 
     @staticmethod
-    def _deduplicate(papers: list[Paper]) -> list[Paper]:
+    def _deduplicate(papers: Iterable[Paper]) -> list[Paper]:
         """三级去重：DOI / arXiv id / 标题指纹中任一 key 共享则视为同篇。
 
         实现：union-find，每组保留 citation_count 最高者，并补全缺失字段。
         """
+        papers = list(papers)
         n = len(papers)
         if n == 0:
             return []
-
-        keys_per_paper: list[list[str]] = []
-        for p in papers:
-            keys: list[str] = []
-            if p.doi:
-                keys.append(f"doi:{p.doi.lower()}")
-            if p.arxiv_id:
-                keys.append(f"arxiv:{p.arxiv_id}")
-            keys.append(f"title:{_title_fingerprint(p.title)}")
-            keys_per_paper.append(keys)
 
         parent = list(range(n))
 
@@ -92,28 +92,38 @@ class SearchAggregator:
                 parent[ra] = rb
 
         key_to_idx: dict[str, int] = {}
-        for i, keys in enumerate(keys_per_paper):
-            for k in keys:
+        for i, paper in enumerate(papers):
+            for k in _dedupe_keys(paper):
                 if k in key_to_idx:
                     union(key_to_idx[k], i)
                 else:
                     key_to_idx[k] = i
 
-        groups: dict[int, list[Paper]] = {}
-        for i, p in enumerate(papers):
-            groups.setdefault(find(i), []).append(p)
+        best_by_root: dict[int, Paper] = {}
+        for i, paper in enumerate(papers):
+            root = find(i)
+            best = best_by_root.get(root)
+            if best is None or (paper.citation_count or 0) > (best.citation_count or 0):
+                best_by_root[root] = paper
 
-        out: list[Paper] = []
-        for group in groups.values():
-            best = max(group, key=lambda p: p.citation_count or 0)
-            for other in group:
-                if other is best:
-                    continue
-                if not best.abstract and other.abstract:
-                    best.abstract = other.abstract
-                if best.doi is None and other.doi:
-                    best.doi = other.doi
-                if best.arxiv_id is None and other.arxiv_id:
-                    best.arxiv_id = other.arxiv_id
-            out.append(best)
-        return out
+        for i, paper in enumerate(papers):
+            best = best_by_root[find(i)]
+            if paper is best:
+                continue
+            if not best.abstract and paper.abstract:
+                best.abstract = paper.abstract
+            if best.doi is None and paper.doi:
+                best.doi = paper.doi
+            if best.arxiv_id is None and paper.arxiv_id:
+                best.arxiv_id = paper.arxiv_id
+
+        return list(best_by_root.values())
+
+
+def _dedupe_keys(paper: Paper) -> Iterable[str]:
+    """Yield deduplication keys for one paper without allocating a per-paper list."""
+    if paper.doi:
+        yield f"doi:{paper.doi.lower()}"
+    if paper.arxiv_id:
+        yield f"arxiv:{paper.arxiv_id}"
+    yield f"title:{_title_fingerprint(paper.title)}"

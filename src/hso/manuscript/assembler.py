@@ -22,7 +22,7 @@ from hso.manuscript.template import (
     ManuscriptSection,
     TemplateAuthor,
 )
-from hso.models import DraftedSection, Experiment, Outline, Paper
+from hso.models import DraftedSection, Experiment, ExperimentTimeSeries, Outline, Paper
 
 
 class AssemblyResult(BaseModel):
@@ -87,6 +87,10 @@ class ManuscriptAssembler:
         unresolved: list[str] = []
         missing_artifacts: list[str] = []
         sections: list[ManuscriptSection] = []
+        artifact_cache: dict[str, tuple[str, list[Path], list[Path], list[str]]] = {}
+        timeseries_by_name: dict[str, list[ExperimentTimeSeries]] = {}
+        for series in experiment.timeseries:
+            timeseries_by_name.setdefault(series.name, []).append(series)
 
         for plan in outline.sections:
             drafted = drafted_by_id.get(plan.section_id)
@@ -100,6 +104,8 @@ class ManuscriptAssembler:
                 experiment=experiment,
                 table_dir=table_dir,
                 figure_dir=figure_dir,
+                artifact_cache=artifact_cache,
+                timeseries_by_name=timeseries_by_name,
             )
             table_paths.extend(section_tables)
             figure_paths.extend(section_figures)
@@ -145,6 +151,8 @@ class ManuscriptAssembler:
         experiment: Experiment,
         table_dir: Path,
         figure_dir: Path,
+        artifact_cache: dict[str, tuple[str, list[Path], list[Path], list[str]]],
+        timeseries_by_name: dict[str, list[ExperimentTimeSeries]],
     ) -> tuple[str, list[Path], list[Path], list[str]]:
         """Render requested artifacts and return LaTeX snippets plus file manifests."""
         snippets: list[str] = []
@@ -153,10 +161,20 @@ class ManuscriptAssembler:
         missing: list[str] = []
 
         for artifact_id in artifacts:
+            if artifact_id in artifact_cache:
+                snippet, cached_tables, cached_figures, cached_missing = artifact_cache[artifact_id]
+                if snippet:
+                    snippets.append(snippet)
+                table_paths.extend(cached_tables)
+                figure_paths.extend(cached_figures)
+                missing.extend(cached_missing)
+                continue
+
             kind, name = _split_artifact_id(artifact_id)
             if kind == "table":
                 if not experiment.results:
                     missing.append(artifact_id)
+                    artifact_cache[artifact_id] = ("", [], [], [artifact_id])
                     continue
                 table_dir.mkdir(parents=True, exist_ok=True)
                 table_path = table_dir / f"{_latex_safe_id(name)}.tex"
@@ -169,11 +187,14 @@ class ManuscriptAssembler:
                     encoding="utf-8",
                 )
                 table_paths.append(table_path)
-                snippets.append(f"\\input{{tables/{table_path.name}}}")
+                snippet = f"\\input{{tables/{table_path.name}}}"
+                snippets.append(snippet)
+                artifact_cache[artifact_id] = (snippet, [table_path], [], [])
             elif kind == "fig":
-                matching = [series for series in experiment.timeseries if series.name == name]
+                matching = timeseries_by_name.get(name, [])
                 if not matching:
                     missing.append(artifact_id)
+                    artifact_cache[artifact_id] = ("", [], [], [artifact_id])
                     continue
                 figure_dir.mkdir(parents=True, exist_ok=True)
                 figure_path = figure_dir / f"{_latex_safe_id(name)}.pdf"
@@ -184,9 +205,12 @@ class ManuscriptAssembler:
                     title=_title_from_id(name),
                 )
                 figure_paths.append(figure_path)
-                snippets.append(_figure_snippet(name=name, filename=figure_path.name))
+                snippet = _figure_snippet(name=name, filename=figure_path.name)
+                snippets.append(snippet)
+                artifact_cache[artifact_id] = (snippet, [], [figure_path], [])
             else:
                 missing.append(artifact_id)
+                artifact_cache[artifact_id] = ("", [], [], [artifact_id])
 
         return "\n\n".join(_dedupe_strings(snippets)), table_paths, figure_paths, missing
 

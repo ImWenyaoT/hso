@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Iterable
+from typing import cast
 
 from hso.models import BibEntry, Paper
 
@@ -33,7 +34,7 @@ def _first_title_word(paper: Paper) -> str:
     for word in re.findall(r"[A-Za-z]+", paper.title or ""):
         slug = word.lower()
         if slug not in stopwords:
-            return slug
+            return cast(str, slug)
     return "paper"
 
 

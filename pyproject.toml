@@ -74,7 +74,7 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
 [[tool.mypy.overrides]]
-module = ["arxiv.*", "semanticscholar.*", "diskcache.*", "matplotlib.*"]
+module = ["arxiv.*", "semanticscholar.*", "diskcache.*", "matplotlib.*", "pandas.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

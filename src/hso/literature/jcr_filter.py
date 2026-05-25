@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import SupportsFloat, SupportsIndex, cast
 
 from hso.models import JCRRecord, Paper
 
@@ -77,7 +78,11 @@ class JCRFilter:
 
         if_raw = info.get("影响因子") or info.get("if_2024")
         try:
-            if_2024 = float(if_raw) if if_raw not in (None, "") else None
+            if if_raw in (None, ""):
+                if_2024 = None
+            else:
+                if_value = cast(str | bytes | SupportsFloat | SupportsIndex, if_raw)
+                if_2024 = float(if_value)
         except (TypeError, ValueError):
             if_2024 = None
 

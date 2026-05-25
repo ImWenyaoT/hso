@@ -59,7 +59,9 @@ class ExperimentLoader:
             raise ValueError(f"CSV 缺少 method 列：{method_col!r}（已有列：{list(df.columns)}）")
 
         results: list[ExperimentResult] = []
-        for _, row in df.iterrows():
+        columns = list(df.columns)
+        for values in df.itertuples(index=False, name=None):
+            row = dict(zip(columns, values, strict=True))
             metrics: dict[str, float] = {}
             metadata: dict[str, Any] = {}
             for col, value in row.items():

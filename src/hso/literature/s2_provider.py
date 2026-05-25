@@ -33,7 +33,21 @@ class SemanticScholarProvider(PaperProvider):
     ) -> None:
         """初始化。client 注入用于测试时 mock。"""
         self._headers = {"x-api-key": api_key} if api_key else {}
+        self._owns_client = client is None
         self._client = client or httpx.Client(timeout=30.0, headers=self._headers)
+
+    def close(self) -> None:
+        """Close the owned HTTP client."""
+        if self._owns_client:
+            self._client.close()
+
+    def __enter__(self) -> SemanticScholarProvider:
+        """Return this provider when used as a context manager."""
+        return self
+
+    def __exit__(self, *_exc_info: object) -> None:
+        """Close network resources when leaving a context manager."""
+        self.close()
 
     @retry(
         stop=stop_after_attempt(3),
@@ -44,7 +58,7 @@ class SemanticScholarProvider(PaperProvider):
     def _fetch(self, query: SearchQuery) -> dict[str, Any]:
         """调用 S2 paper/search 接口，处理速率限制重试。"""
         cutoff_year = date.today().year - query.years
-        params = {
+        params: dict[str, str | int] = {
             "query": query.query,
             "fields": _FIELDS,
             "limit": min(query.top_k_per_provider, 100),

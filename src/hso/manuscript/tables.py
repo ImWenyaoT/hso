@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Literal
+from typing import Literal, cast
 
 import pandas as pd
 
@@ -98,7 +98,7 @@ def results_to_latex_table(
         position="htbp",
     )
     # pandas 的 to_latex 用 \toprule / \midrule / \bottomrule 已是 booktabs；保留即可
-    return body
+    return cast(str, body)
 
 
 def _fmt_value(value: object, float_fmt: str, *, bold: bool) -> str:

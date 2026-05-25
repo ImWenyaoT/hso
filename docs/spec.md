@@ -19,7 +19,7 @@
 |---|---|
 | 语言 | Python 3.12+ |
 | 依赖管理 | uv |
-| LLM | **OpenAI Responses API**（`responses.parse(text_format=PydanticModel)`）。仅 OpenAI / Azure OpenAI 原生支持。两种 backend：API key（默认）/ OAuth 复用 Codex 协议（见 §10） |
+| LLM | **OpenAI Responses API + Chat Completions 兼容层**。默认 GPT provider 走 Responses API；`deepseek` / `custom` / `xai` 可接兼容端点；OAuth 复用 Codex 协议（见 §10） |
 | 编排 | 显式 pipeline + 状态机；**不引入 LangGraph / CrewAI / AutoGen** |
 | schema | Pydantic v2 |
 | HTTP | httpx（trust_env 默认开，测试场景显式关） |
@@ -33,7 +33,7 @@
 ```
 src/hso/
 ├── models/        # Paper / Author / Venue / JCRRecord / SectionProfile / SectionStructure
-├── llm/           # OpenAI Responses API 封装：parse() / respond() + 磁盘缓存 + 重试
+├── llm/           # Responses / Chat Completions 封装：parse() / respond() + 磁盘缓存 + 重试
 ├── literature/    # PaperProvider 抽象 + arXiv / Semantic Scholar + JCR 过滤 + 聚合去重
 ├── synthesis/     # LLM 驱动的章节结构归纳（structured output）
 ├── manuscript/    # Outline / Drafter / Assembler / LaTeX 编译 / 模板与图表
@@ -46,7 +46,7 @@ src/hso/
 
 只暴露两个方法：
 - `parse(text_format: type[BaseModel], instructions: str, user_input: str) -> BaseModel`：
-  type-safe structured output。直接拿 `response.output_parsed`，无需手工 JSON 校验
+  type-safe structured output。通过 JSON mode 请求，返回后由 Pydantic 做本地校验
 - `respond(instructions: str, user_input: str) -> str`：纯文本响应
 
 特性：
@@ -64,7 +64,7 @@ src/hso/
 ### 4.3 章节归纳（`synthesis/section_profile.py`）
 
 - 输入：研究方向 + N 篇 Paper 的 abstract
-- 通过 `LLMClient.parse(text_format=_SectionProfileLLM, ...)` 走 Responses API
+- 通过 `LLMClient.parse(text_format=_SectionProfileLLM, ...)` 默认走 Responses structured output
 - LLM schema 与持久化 schema 解耦：`_SectionStructureLLM`（strict 兼容） → `SectionStructure`（业务模型，带 default）
 
 ## 5. CLI
@@ -76,8 +76,11 @@ hso draft --profile output/profile.json --experiment data/processed/exp.json --p
 ```
 
 需要的环境变量见 `.env.example`：
-- `HSO_LLM_API_KEY`（必填，调 LLM 时）
-- `HSO_LLM_BASE_URL` / `HSO_LLM_MODEL`
+- `LLM_PROVIDER`：`gpt`（默认）/ `deepseek` / `custom` / `xai` / `oauth` / `legacy`
+- `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL`：GPT Responses API 配置
+- `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`：DeepSeek 或自接兼容端点配置
+- `OAUTH_MODEL`（配合 `hso login` 的个人 ChatGPT OAuth token）
+- `HSO_LLM_*`、`HSO_GPT_*`、`HSO_XAI_*` 仅保留 legacy/backward compatibility
 - `HSO_S2_API_KEY`（可选，无 key 也能调 Semantic Scholar）
 
 需要的数据：
@@ -145,7 +148,7 @@ hso draft --profile output/profile.json --experiment data/processed/exp.json --p
 4. 解 id_token JWT 取 `chatgpt_account_id`
 5. 写 `~/.config/hso/auth.json`（权限 0600）
 6. `LLMClient(auth_mode='oauth')` 启动时读 auth.json，过期/陈旧自动 refresh（refresh 用 JSON body）
-7. 调 `responses.parse` 时 SDK 自动加 `Authorization: Bearer <access>` + 我们的 `default_headers`
+7. OAuth adapter 调用 ChatGPT Codex backend 时自动加 `Authorization: Bearer <access>` + 我们的 `default_headers`
 
 ### 10.3 ToS / 风险
 

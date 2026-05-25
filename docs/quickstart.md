@@ -19,7 +19,10 @@ uv run hso login
 
 会弹浏览器到 OpenAI auth 页面，登录你的 ChatGPT 账号 → token 写入 `~/.config/hso/auth.json`。
 
-> **替代方案**：填 `HSO_LLM_API_KEY` 进 `.env` 用 API key（按 token 计费走自己 OpenAI 账户）。
+> **替代方案**：在仓库根目录创建 `.env`，用 `LLM_PROVIDER` 选择后端。
+> 默认 `gpt` 使用 `OPENAI_API_KEY` / `OPENAI_BASE_URL` 走 Responses API；
+> 可切 `deepseek` / `custom` / `xai` 接 OpenAI-compatible Chat Completions
+> endpoint，也可切 `oauth` 使用 `hso login` 写入的个人 ChatGPT token。
 
 ```bash
 uv run hso whoami       # 看登录状态
@@ -48,11 +51,13 @@ uv run hso analyze \
   --out output/demo/profile.json
 ```
 
-不传 `--auth-mode`：自动检测 OAuth token，有就用 ChatGPT 订阅；没有 fallback 到 API key。手动指定：
+不传 `--auth-mode`：按 `.env` 的 `LLM_PROVIDER` 选择。手动指定：
 
 ```bash
+uv run hso analyze ... --auth-mode gpt --model gpt-5.4-mini
+uv run hso analyze ... --auth-mode deepseek --model deepseek-v4-flash
+uv run hso analyze ... --auth-mode custom --model local-model
 uv run hso analyze ... --auth-mode oauth --model gpt-5.2
-uv run hso analyze ... --auth-mode api_key --model gpt-4o-mini
 ```
 
 输出 `profile.json`：每个章节（intro / related_work / method / experiment / conclusion）一份"这个领域大家都怎么写"的结构化总结，包括：

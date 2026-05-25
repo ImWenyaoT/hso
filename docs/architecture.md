@@ -13,13 +13,13 @@ CLI
   hso start / hso status
     |
 Python FastAPI Gateway
-  sessions, events, memory, tool execution
+  SQLite-backed sessions/events, memory, tool execution
     |
 Agent Runtime
   main agent, sub-agent orchestration, future OpenAI Agents SDK execution
     |
 Workspace
-  JSONL memory, artifacts, manuscript outputs
+  SQLite gateway state and memory, artifacts, manuscript outputs
 
 Next.js UI
   operator workspace, event timeline, memory viewer
@@ -29,8 +29,8 @@ Next.js UI
 ## Python Responsibilities
 
 - Gateway process and API surface.
-- Session lifecycle and event stream ownership.
-- Memory persistence and later compaction/retrieval.
+- Session lifecycle and event stream ownership backed by local SQLite.
+- Memory persistence and later compaction/retrieval backed by local SQLite.
 - Agent and sub-agent orchestration.
 - OpenAI Agents SDK and Responses API integration.
 - Tool execution, permissions, and artifacts.
@@ -47,8 +47,9 @@ Next.js UI
 
 ## Current P0 Components
 
-- `hso.memory.MemoryStore`: append-only JSONL memory store.
-- `hso.gateway.GatewayRuntime`: in-process session/event/memory runtime.
+- `hso.memory.MemoryStore`: SQLite-backed memory store.
+- `hso.gateway.GatewaySQLiteStore`: async SQLite persistence for sessions and events.
+- `hso.gateway.GatewayRuntime`: session/event/memory runtime backed by SQLite state.
 - `hso.agents.LocalAgentOrchestrator`: deterministic main/sub-agent event producer for
   offline development.
 - `hso.gateway.create_app`: FastAPI app factory exposing the local gateway API.
@@ -57,7 +58,7 @@ Next.js UI
 ## Next Migration Steps
 
 1. Replace `LocalAgentOrchestrator` with an interface-backed OpenAI Agents SDK runner.
-2. Add SSE or WebSocket event streaming.
-3. Persist sessions and events to SQLite.
+2. Bind OpenAI Agents SDK `SQLiteSession` ids to gateway session ids.
+3. Add SSE or WebSocket event streaming.
 4. Convert `search`, `analyze`, and `draft` into gateway tools.
 5. Add approval boundaries for shell/file/browser tools.

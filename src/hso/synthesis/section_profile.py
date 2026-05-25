@@ -1,4 +1,4 @@
-"""根据 N 篇论文 abstract 生成章节级写作 profile（用 Responses API structured output）。"""
+"""根据 N 篇论文 abstract 生成章节级写作 profile（用 Chat Completions JSON mode）。"""
 
 from __future__ import annotations
 
@@ -39,10 +39,10 @@ Papers:
 
 
 class _SectionStructureLLM(BaseModel):
-    """LLM 直接产出的章节结构 schema（OpenAI strict 模式兼容）。
+    """LLM 直接产出的章节结构 schema（Chat Completions JSON mode 兼容）。
 
     与 ``hso.models.SectionStructure`` 同构，但所有字段必填、不带
-    default，便于 Responses API 严格 JSON Schema 校验。
+    default，便于兼容 endpoint 做 JSON Schema 校验。
     """
 
     section: str = Field(

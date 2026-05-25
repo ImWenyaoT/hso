@@ -1,6 +1,6 @@
 """OutlineBuilder：基于 SectionProfile + Experiment + 候选 papers 生成 Outline。
 
-走 OpenAI Responses API structured output；LLM schema 与业务 schema 解耦
+走 Chat Completions JSON mode structured output；LLM schema 与业务 schema 解耦
 （``_SectionPlanLLM`` / ``_OutlineLLM`` strict 兼容，所有字段必填）。
 """
 

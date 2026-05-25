@@ -38,38 +38,37 @@ def create_app(runtime: GatewayRuntime | None = None) -> FastAPI:
         return {"status": "ok", "service": "hso-gateway"}
 
     @app.get("/api/sessions")
-    def list_sessions() -> list[SessionRecord]:
+    async def list_sessions() -> list[SessionRecord]:
         """List known gateway sessions."""
-        return gateway_runtime.list_sessions()
+        return await gateway_runtime.list_sessions()
 
     @app.post("/api/sessions", status_code=status.HTTP_201_CREATED)
-    def create_session(payload: CreateSessionRequest) -> SessionRecord:
+    async def create_session(payload: CreateSessionRequest) -> SessionRecord:
         """Create a session for a UI or CLI operator."""
-        return gateway_runtime.create_session(title=payload.title)
+        return await gateway_runtime.create_session(title=payload.title)
 
     @app.post("/api/sessions/{session_id}/messages")
-    def send_message(session_id: str, payload: SendMessageRequest) -> SendMessageResponse:
+    async def send_message(session_id: str, payload: SendMessageRequest) -> SendMessageResponse:
         """Send a user message through the local agent runtime."""
         try:
-            events = gateway_runtime.send_message(session_id, payload.content)
-            session = gateway_runtime.get_session(session_id)
+            result = await gateway_runtime.process_message(session_id, payload.content)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
-        return SendMessageResponse(session=session, events=events)
+        return SendMessageResponse(session=result.session, events=result.events)
 
     @app.get("/api/sessions/{session_id}/events")
-    def list_events(session_id: str) -> list[GatewayEvent]:
+    async def list_events(session_id: str) -> list[GatewayEvent]:
         """List events for a session."""
         try:
-            return gateway_runtime.list_events(session_id)
+            return await gateway_runtime.list_events(session_id)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/api/sessions/{session_id}/memory")
-    def list_memory(session_id: str) -> list[MemoryRecord]:
+    async def list_memory(session_id: str) -> list[MemoryRecord]:
         """List memory records for a session."""
         try:
-            return gateway_runtime.list_memory(session_id)
+            return await gateway_runtime.list_memory(session_id)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 

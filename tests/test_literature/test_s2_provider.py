@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import httpx
 import pytest
@@ -61,3 +62,23 @@ class TestSemanticScholarProvider:
         papers = provider.search(SearchQuery(query="x"))
         # 经过 tenacity 3 次重试后依然 429 → 返回空列表
         assert papers == []
+
+    def test_close_only_closes_owned_client(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """SemanticScholarProvider closes clients it creates internally."""
+        provider = SemanticScholarProvider()
+        mock_close = MagicMock()
+        monkeypatch.setattr(provider._client, "close", mock_close)
+
+        provider.close()
+
+        mock_close.assert_called_once_with()
+
+    def test_close_keeps_injected_client_open(self) -> None:
+        """SemanticScholarProvider does not own test or shared injected clients."""
+        client = httpx.Client(timeout=5.0, trust_env=False)
+        provider = SemanticScholarProvider(client=client)
+
+        provider.close()
+
+        assert not client.is_closed
+        client.close()
