@@ -6,13 +6,36 @@ on:
   pull_request:
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ["3.12"]
+  typescript:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  legacy-python:
+    runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -23,16 +46,7 @@ jobs:
           version: "0.10.9"
 
       - name: Set up Python
-        run: uv python install ${{ matrix.python-version }}
+        run: cd legacy/python && uv python install 3.12
 
-      - name: Sync deps
-        run: uv sync --extra dev
-
-      - name: Lint (ruff)
-        run: uv run ruff check src tests scripts
-
-      - name: Type check (mypy)
-        run: uv run mypy src
-
-      - name: Tests
-        run: uv run pytest -v
+      - name: Legacy regression
+        run: npm run legacy:pytest

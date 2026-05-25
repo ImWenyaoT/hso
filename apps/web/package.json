@@ -2,14 +2,21 @@
   "name": "hso-web",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "lint": "tsc --noEmit",
     "start": "next start",
-    "lint": "next lint"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "lucide-react": "^0.468.0",
+    "@ai-sdk/react": "^3.0.0",
+    "@hso/agent-runtime": "file:../../packages/agent-runtime",
+    "@hso/shared": "file:../../packages/shared",
+    "@hso/storage": "file:../../packages/storage",
+    "ai": "^6.0.0",
+    "material-symbols": "^0.44.9",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

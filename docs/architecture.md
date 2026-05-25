@@ -2,62 +2,68 @@
 
 ## Intent
 
-hso is a local-first agent gateway for research and manuscript workflows. It is
-inspired by OpenClaw's gateway/session/agent shape, but keeps the core runtime in
-Python and limits TypeScript to the operator UI.
+hso is a local-first research agent gateway. The current primary architecture is
+TypeScript full-stack: a Next.js App Router application provides both the
+operator workspace and the gateway API, while package workspaces hold reusable
+runtime, storage, and schema code.
 
 ## Runtime Split
 
 ```text
-CLI
-  hso start / hso status
-    |
-Python FastAPI Gateway
-  sessions, events, memory, tool execution
-    |
-Agent Runtime
-  main agent, sub-agent orchestration, future OpenAI Agents SDK execution
-    |
-Workspace
-  JSONL memory, artifacts, manuscript outputs
+Next.js operator workspace
+  uses @ai-sdk/react useChat for /api/chat UI streaming
+  reads sessions, events, and memory from Next route handlers
 
-Next.js UI
-  operator workspace, event timeline, memory viewer
-  calls Python gateway through /api/* only
+Next.js route handlers
+  /api/health
+  /api/sessions
+  /api/sessions/[sessionId]/messages
+  /api/sessions/[sessionId]/events
+  /api/sessions/[sessionId]/memory
+  /api/chat
+
+packages/agent-runtime
+  GatewayRuntime
+  OpenAIAgentsRunner
+  injected fake runners for tests
+
+packages/storage
+  GatewayStore
+  data/gateway/gateway.sqlite3
+  data/gateway/memory.sqlite3
+
+packages/shared
+  Zod schemas
+  JSON-compatible API types
 ```
 
-## Python Responsibilities
+## Responsibilities
 
-- Gateway process and API surface.
-- Session lifecycle and event stream ownership.
-- Memory persistence and later compaction/retrieval.
-- Agent and sub-agent orchestration.
-- OpenAI Agents SDK and Responses API integration.
-- Tool execution, permissions, and artifacts.
-- Existing manuscript pipeline compatibility.
+- `apps/web`: UI shell, route handlers, and AI SDK UIMessage streaming adapter.
+- `packages/shared`: API schemas for `SessionRecord`, `GatewayEvent`,
+  `MemoryRecord`, `CreateSessionRequest`, `SendMessageRequest`, and
+  `SendMessageResponse`.
+- `packages/storage`: SQLite persistence for `gateway_sessions`,
+  `gateway_events`, and `memory_records`.
+- `packages/agent-runtime`: OpenAI Agents SDK orchestration, memory append, event
+  generation, and error event persistence.
+- `packages/cli`: `hso start`, `hso status`, and `hso smoke`.
+- `legacy/python`: old manuscript pipeline and prior FastAPI gateway reference.
 
-## TypeScript Responsibilities
+## Provider Policy
 
-- Next.js UI only.
-- Session list, event timeline, memory panel, and message composer.
-- Local API calls to the Python gateway.
-- No direct OpenAI calls.
-- No secret storage.
-- No tool execution.
+The TypeScript gateway is GPT-first for this phase:
 
-## Current P0 Components
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `OPENAI_MODEL`
+- `LLM_PROVIDER=gpt` as the default compatibility switch
 
-- `hso.memory.MemoryStore`: append-only JSONL memory store.
-- `hso.gateway.GatewayRuntime`: in-process session/event/memory runtime.
-- `hso.agents.LocalAgentOrchestrator`: deterministic main/sub-agent event producer for
-  offline development.
-- `hso.gateway.create_app`: FastAPI app factory exposing the local gateway API.
-- `apps/web`: Next.js operator workspace shell.
+xAI/custom/OAuth and manuscript tools remain legacy concerns until a new
+TypeScript provider interface is added.
 
-## Next Migration Steps
+## Build-Time Boundary
 
-1. Replace `LocalAgentOrchestrator` with an interface-backed OpenAI Agents SDK runner.
-2. Add SSE or WebSocket event streaming.
-3. Persist sessions and events to SQLite.
-4. Convert `search`, `analyze`, and `draft` into gateway tools.
-5. Add approval boundaries for shell/file/browser tools.
+Route handlers and runtime clients lazy-initialize storage and OpenAI Agents SDK
+objects. `next build` must not require a model key or open SQLite files earlier
+than request time.
