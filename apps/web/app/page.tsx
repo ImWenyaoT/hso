@@ -1,5 +1,7 @@
 "use client";
 
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { Bot, Brain, CircleDot, Plus, Send, Server } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -28,6 +30,7 @@ type MemoryRecord = {
   created_at: string;
 };
 
+/** Requests a typed JSON payload from the local Next.js gateway API. */
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -42,6 +45,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+/** Renders the three-panel local operator workspace backed by TS route handlers. */
 export default function GatewayWorkspace() {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -50,6 +54,14 @@ export default function GatewayWorkspace() {
   const [message, setMessage] = useState("Map the hso gateway migration.");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const chatTransport = useMemo(() => new DefaultChatTransport({ api: "/api/chat" }), []);
+  const {
+    sendMessage: sendChatMessage,
+    status: chatStatus,
+    error: chatError
+  } = useChat({
+    transport: chatTransport
+  });
 
   const activeSession = useMemo(
     () => sessions.find((session) => session.id === activeSessionId) ?? null,
@@ -61,6 +73,12 @@ export default function GatewayWorkspace() {
   }, []);
 
   useEffect(() => {
+    if (chatError) {
+      setError(chatError.message);
+    }
+  }, [chatError]);
+
+  useEffect(() => {
     if (!activeSessionId) {
       setEvents([]);
       setMemory([]);
@@ -69,6 +87,7 @@ export default function GatewayWorkspace() {
     void refreshSessionState(activeSessionId);
   }, [activeSessionId]);
 
+  /** Refreshes the persisted session list from the route handler API. */
   async function refreshSessions() {
     try {
       const nextSessions = await requestJson<SessionRecord[]>("/api/sessions");
@@ -79,6 +98,7 @@ export default function GatewayWorkspace() {
     }
   }
 
+  /** Loads events and memory for the selected session. */
   async function refreshSessionState(sessionId: string) {
     try {
       const [nextEvents, nextMemory] = await Promise.all([
@@ -92,6 +112,7 @@ export default function GatewayWorkspace() {
     }
   }
 
+  /** Creates a new persisted gateway session and activates it in the UI. */
   async function createSession() {
     setBusy(true);
     setError(null);
@@ -109,6 +130,7 @@ export default function GatewayWorkspace() {
     }
   }
 
+  /** Sends the user task through the AI SDK UI stream and reloads persisted state. */
   async function sendMessage() {
     if (!activeSessionId || !message.trim()) {
       return;
@@ -116,14 +138,12 @@ export default function GatewayWorkspace() {
     setBusy(true);
     setError(null);
     try {
-      const response = await requestJson<{ events: GatewayEvent[] }>(
-        `/api/sessions/${activeSessionId}/messages`,
+      await sendChatMessage(
+        { text: message },
         {
-          method: "POST",
-          body: JSON.stringify({ content: message })
+          body: { sessionId: activeSessionId }
         }
       );
-      setEvents(response.events);
       await refreshSessionState(activeSessionId);
       setMessage("");
     } catch (err) {
@@ -132,6 +152,8 @@ export default function GatewayWorkspace() {
       setBusy(false);
     }
   }
+
+  const isStreaming = chatStatus === "submitted" || chatStatus === "streaming";
 
   return (
     <main className="shell">
@@ -167,7 +189,7 @@ export default function GatewayWorkspace() {
             <Bot size={19} />
             <h1>{activeSession?.title ?? "Gateway workspace"}</h1>
           </div>
-          <span className="muted">{error ?? "Python gateway / Next operator UI"}</span>
+          <span className="muted">{error ?? "TypeScript gateway / AI SDK stream"}</span>
         </div>
         <div className="timeline">
           {events.length === 0 ? <div className="empty">Create a session and send a task.</div> : null}
@@ -191,7 +213,7 @@ export default function GatewayWorkspace() {
             className="send-button"
             type="button"
             onClick={sendMessage}
-            disabled={busy || !activeSessionId || !message.trim()}
+            disabled={busy || isStreaming || !activeSessionId || !message.trim()}
           >
             <Send size={17} />
           </button>

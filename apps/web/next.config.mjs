@@ -1,15 +1,7 @@
-const gatewayUrl = process.env.HSO_GATEWAY_URL ?? "http://127.0.0.1:8765";
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${gatewayUrl}/api/:path*`
-      }
-    ];
-  }
+  serverExternalPackages: ["better-sqlite3"],
+  transpilePackages: ["@hso/agent-runtime", "@hso/shared", "@hso/storage"]
 };
 
 export default nextConfig;
