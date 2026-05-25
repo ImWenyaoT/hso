@@ -1,94 +1,87 @@
-# hso — local-first research agent gateway
+# hso — TypeScript local-first research agent gateway
 
-hso is being migrated from a manuscript-only CLI pipeline into an OpenClaw-inspired,
-local-first agent gateway for research workflows.
+hso is now a TypeScript full-stack research agent gateway. The main runtime is
+Next.js App Router route handlers plus package-level TypeScript services for
+schema validation, SQLite persistence, OpenAI Agents SDK orchestration, Vercel
+AI SDK UI streaming, and a small CLI.
 
-The target shape is:
+Python is preserved under `legacy/python` as the old manuscript pipeline and as
+a regression reference. It is no longer the gateway process that the web app
+proxies to.
 
-- **Python core**: gateway, memory, agent runtime, sub-agent orchestration, tools,
-  persistence, CLI, and LLM SDK integration.
-- **TypeScript frontend only**: a Next.js operator workspace that talks to the Python
-  gateway over local HTTP APIs.
-- **CLI as control plane**: `hso start` launches the local gateway; existing
-  manuscript commands remain available while they are promoted into gateway tools.
-
-## Current P0 Runtime
+## Workspace
 
 ```text
-Next.js UI
-  -> /api/* rewrite
-Python FastAPI gateway
-  -> GatewayRuntime
-  -> GatewaySQLiteStore SQLite sessions/events
-  -> MemoryStore SQLite memory
-  -> LocalAgentOrchestrator
+apps/web                  Next.js operator workspace and route handlers
+packages/shared           Zod schemas and JSON-compatible TypeScript types
+packages/storage          better-sqlite3 sessions, events, and memory
+packages/agent-runtime    OpenAI Agents SDK turn orchestration
+packages/cli              Minimal hso start/status/smoke CLI
+legacy/python             Previous Python manuscript pipeline
+data/gateway              Local SQLite gateway state
 ```
 
-Implemented gateway endpoints:
+## Gateway API
+
+The Next app owns the gateway API directly:
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/health` | gateway readiness |
-| `GET /api/sessions` | list local sessions |
+| `GET /api/health` | readiness check |
+| `GET /api/sessions` | list sessions |
 | `POST /api/sessions` | create a session |
-| `POST /api/sessions/{id}/messages` | run one local agent turn |
-| `GET /api/sessions/{id}/events` | inspect agent/gateway events |
-| `GET /api/sessions/{id}/memory` | inspect session memory |
+| `POST /api/sessions/[sessionId]/messages` | run one agent turn and return JSON events |
+| `GET /api/sessions/[sessionId]/events` | inspect persisted events |
+| `GET /api/sessions/[sessionId]/memory` | inspect persisted memory |
+| `POST /api/chat` | Vercel AI SDK UIMessage stream backed by the same runtime |
 
 ## Run
 
-Install Python dependencies:
-
 ```bash
-uv sync --extra dev
-```
-
-For API-key backends, create `/Users/edward/Documents/hso/.env` from `.env.example`.
-`LLM_PROVIDER=gpt` is the default and uses `OPENAI_API_KEY` /
-`OPENAI_BASE_URL` through the OpenAI Responses API. Switch to
-`LLM_PROVIDER=deepseek`, `custom`, or `xai` for OpenAI-compatible Chat
-Completions endpoints, or `LLM_PROVIDER=oauth` after `uv run hso login` to use
-the personal ChatGPT OAuth path.
-
-Start the Python gateway:
-
-```bash
-uv run hso start --host 127.0.0.1 --port 8765
-```
-
-Check the gateway URL:
-
-```bash
-uv run hso status --host 127.0.0.1 --port 8765
-```
-
-The Next.js UI lives in `apps/web` and proxies `/api/*` to
-`http://127.0.0.1:8765` by default. Install and run it separately:
-
-```bash
-cd apps/web
 npm install
 npm run dev
 ```
 
-## Existing Manuscript Pipeline
+Open the printed Next.js URL. The UI talks to the local route handlers directly;
+there is no Python FastAPI proxy in the primary path.
 
-The earlier manuscript pipeline is still present:
+For real model calls, create `.env` from `.env.example`:
 
 ```bash
-uv run hso search "diffusion model image editing" --allow-preprint --out output/demo/papers.json
-uv run hso analyze --input output/demo/papers.json --out output/demo/profile.json
-uv run hso draft --profile output/demo/profile.json --experiment data/processed/exp.json --papers output/demo/papers.json --out output/demo/draft
+LLM_PROVIDER=gpt
+OPENAI_API_KEY=...
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-5.4-mini
 ```
 
-During the migration, these commands remain stable. The next step is to expose them
-as gateway tools and agent/sub-agent workflows.
+## CLI
 
-## Architecture Direction
+```bash
+npm run hso -- start
+npm run hso -- status
+npm run hso -- smoke
+```
 
-hso intentionally does not use LangChain or LangGraph as the main spine. The
-project uses explicit gateway/session/memory/tool boundaries and keeps the OpenAI
-Agents SDK / Responses API integration behind the Python runtime layer.
+`smoke` loads `.env`, runs one real OpenAI Agents SDK turn, and writes sessions,
+events, and memory to `data/gateway/*.sqlite3`.
 
-The frontend must not call OpenAI directly. Secrets, memory writes, tool execution,
-and agent orchestration stay inside the Python gateway.
+## Checks
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+The optional legacy regression remains available:
+
+```bash
+npm run legacy:pytest
+```
+
+## Legacy Python
+
+The old `search`, `analyze`, and `draft` manuscript pipeline lives in
+`legacy/python`. It stays available for reference and for later tool migration,
+but it is intentionally outside the TypeScript gateway CI path.
