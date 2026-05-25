@@ -21,6 +21,7 @@ venv/
 .uv-cache/
 node_modules/
 .next/
+*.tsbuildinfo
 
 # IDE
 .vscode/
@@ -41,6 +42,8 @@ Thumbs.db
 
 # data
 data/.cache/
+data/gateway/*.sqlite3
+data/gateway/*.sqlite3-*
 output/
 data/raw/*
 data/processed/*

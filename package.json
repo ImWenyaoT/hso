@@ -1,0 +1,29 @@
+{
+  "name": "hso",
+  "version": "0.3.0",
+  "private": true,
+  "description": "TypeScript full-stack local-first research agent gateway.",
+  "type": "module",
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npm --workspace hso-web run dev",
+    "hso": "tsx packages/cli/src/index.ts",
+    "legacy:pytest": "cd legacy/python && UV_CACHE_DIR=.uv-cache uv run --extra dev pytest",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "vitest run",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.14"
+  }
+}

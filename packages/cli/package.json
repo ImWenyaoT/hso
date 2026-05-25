@@ -1,0 +1,19 @@
+{
+  "name": "@hso/cli",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "hso": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hso/agent-runtime": "file:../agent-runtime"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
+  }
+}
