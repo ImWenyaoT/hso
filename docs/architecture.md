@@ -48,7 +48,6 @@ packages/shared
 - `packages/agent-runtime`: OpenAI Agents SDK orchestration, memory append, event
   generation, and error event persistence.
 - `packages/cli`: `hso start`, `hso status`, and `hso smoke`.
-- `legacy/python`: old manuscript pipeline and prior FastAPI gateway reference.
 
 ## Provider Policy
 
@@ -59,7 +58,7 @@ The TypeScript gateway is GPT-first for this phase:
 - `OPENAI_MODEL`
 - `LLM_PROVIDER=gpt` as the default compatibility switch
 
-xAI/custom/OAuth and manuscript tools remain legacy concerns until a new
+xAI/custom/OAuth and manuscript tools remain future concerns until a new
 TypeScript provider interface is added.
 
 ## Build-Time Boundary

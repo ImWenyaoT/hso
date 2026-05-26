@@ -1,13 +1,9 @@
 # hso — TypeScript local-first research agent gateway
 
-hso is now a TypeScript full-stack research agent gateway. The main runtime is
+hso is a TypeScript full-stack research agent gateway. The main runtime is
 Next.js App Router route handlers plus package-level TypeScript services for
 schema validation, SQLite persistence, OpenAI Agents SDK orchestration, Vercel
 AI SDK UI streaming, and a small CLI.
-
-Python is preserved under `legacy/python` as the old manuscript pipeline and as
-a regression reference. It is no longer the gateway process that the web app
-proxies to.
 
 ## Workspace
 
@@ -17,7 +13,6 @@ packages/shared           Zod schemas and JSON-compatible TypeScript types
 packages/storage          better-sqlite3 sessions, events, and memory
 packages/agent-runtime    OpenAI Agents SDK turn orchestration
 packages/cli              Minimal hso start/status/smoke CLI
-legacy/python             Previous Python manuscript pipeline
 data/gateway              Local SQLite gateway state
 ```
 
@@ -73,15 +68,3 @@ npm run typecheck
 npm test
 npm run build
 ```
-
-The optional legacy regression remains available:
-
-```bash
-npm run legacy:pytest
-```
-
-## Legacy Python
-
-The old `search`, `analyze`, and `draft` manuscript pipeline lives in
-`legacy/python`. It stays available for reference and for later tool migration,
-but it is intentionally outside the TypeScript gateway CI path.

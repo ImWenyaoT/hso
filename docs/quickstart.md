@@ -56,15 +56,3 @@ npm run typecheck
 npm test
 npm run build
 ```
-
-## 5. 旧 manuscript pipeline
-
-旧 Python pipeline 已移动到 `legacy/python`。需要跑旧流程时：
-
-```bash
-cd legacy/python
-uv sync --extra dev
-uv run hso search "diffusion model image editing" --allow-preprint --out output/demo/papers.json
-uv run hso analyze --input output/demo/papers.json --out output/demo/profile.json
-uv run hso draft --profile output/demo/profile.json --experiment tests/fixtures/experiment.json --papers output/demo/papers.json --out output/demo/draft
-```

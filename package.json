@@ -12,7 +12,6 @@
     "build": "npm run build --workspaces --if-present",
     "dev": "npm --workspace hso-web run dev",
     "hso": "tsx packages/cli/src/index.ts",
-    "legacy:pytest": "cd legacy/python && UV_CACHE_DIR=.uv-cache uv run --extra dev pytest",
     "lint": "npm run lint --workspaces --if-present",
     "test": "vitest run",
     "typecheck": "npm run typecheck --workspaces --if-present"
