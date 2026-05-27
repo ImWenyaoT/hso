@@ -11,7 +11,6 @@
 - OpenAI Agents SDK TS 负责 agent turn orchestration。
 - Vercel AI SDK 只负责 UIMessage stream 和 React `useChat` 协议。
 - SQLite 负责 session/event/memory persistence。
-- Python manuscript pipeline 保留在 `legacy/python`。
 
 ## 2. 技术栈
 
@@ -24,7 +23,6 @@
 | Agent | `@openai/agents` |
 | UI Stream | `ai` + `@ai-sdk/react` |
 | Tests | Vitest |
-| Legacy | Python 3.12 + uv under `legacy/python` |
 
 ## 3. API Shape
 
@@ -81,10 +79,4 @@ npm run typecheck
 npm test
 npm run build
 npm run hso -- smoke
-```
-
-Optional:
-
-```bash
-npm run legacy:pytest
 ```

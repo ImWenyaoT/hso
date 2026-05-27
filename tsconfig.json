@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.base.json",
   "include": ["packages/**/*.ts", "apps/web/**/*.ts", "apps/web/**/*.tsx"],
-  "exclude": ["node_modules", "apps/web/.next", "legacy"]
+  "exclude": ["node_modules", "apps/web/.next"]
 }
